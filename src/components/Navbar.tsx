@@ -103,7 +103,7 @@ export default function Navbar() {
         }}
       >
         <Link
-          href="/collection"
+          href="/"
           style={{
             fontWeight: 700,
             marginRight: 8,
