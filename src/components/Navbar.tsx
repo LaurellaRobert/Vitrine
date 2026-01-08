@@ -13,6 +13,7 @@ const exploreItems = [
   { href: "/cafe", label: "Cafe" },
   { href: "/castle", label: "Castle" },
   { href: "/garden", label: "Garden" },
+  { href: "/great_hall", label: "Great Hall"},
 ];
 
 function isActivePath(pathname: string, href: string) {
