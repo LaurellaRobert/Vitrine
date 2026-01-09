@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 export async function trackPageVisit(eventKey: string) {
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
-  if (!user) return { unlockedCount: 0, randomDrop: false };
+  if (!user) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
 
   const ins = await supabase.from("user_events").insert({
     user_id: user.id,
@@ -23,13 +23,14 @@ export async function trackPageVisit(eventKey: string) {
   return {
     unlockedCount: (rpc.data as any)?.unlocked_count ?? 0,
     randomDrop: (rpc.data as any)?.random_drop ?? false,
+    sequenceDrop: (rpc.data as any)?.sequence_drop ?? false,
   };
 }
 
 export async function trackPageClick(eventKey: string) {
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
-  if (!user) return { unlockedCount: 0, randomDrop: false };
+  if (!user) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
 
   const ins = await supabase.from("user_events").insert({
     user_id: user.id,
@@ -51,13 +52,14 @@ export async function trackPageClick(eventKey: string) {
   return {
     unlockedCount: (rpc.data as any)?.unlocked_count ?? 0,
     randomDrop: (rpc.data as any)?.random_drop ?? false,
+    sequenceDrop: (rpc.data as any)?.sequence_drop ?? false,
   };
 }
 
 export async function trackTimeOnPage(eventKey: string) {
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
-  if (!user) return { unlockedCount: 0, randomDrop: false };
+  if (!user) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
 
   const ins = await supabase.from("user_events").insert({
     user_id: user.id,
@@ -77,5 +79,6 @@ export async function trackTimeOnPage(eventKey: string) {
   return {
     unlockedCount: (rpc.data as any)?.unlocked_count ?? 0,
     randomDrop: (rpc.data as any)?.random_drop ?? false,
+    sequenceDrop: (rpc.data as any)?.sequence_drop ?? false,
   };
 }

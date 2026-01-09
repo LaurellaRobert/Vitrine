@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { dismissNotification, getNotifications, subscribeNotifications, type NotificationItem } from "@/lib/notifications";
 
 const primaryItems = [{ href: "/collection", label: "Collection" }];
 
@@ -31,6 +32,8 @@ export default function Navbar() {
 
   const [isAuthed, setIsAuthed] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -48,9 +51,15 @@ export default function Navbar() {
     };
   }, []);
 
+
   useEffect(() => {
     setExploreOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    setNotifications(getNotifications());
+    return subscribeNotifications(setNotifications);
+  }, []);
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
@@ -234,6 +243,105 @@ export default function Navbar() {
               Sign out
             </button>
           )}
+        </div>
+
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            aria-label="Notifications"
+            title="Notifications"
+            onClick={() => setShowNotifications((open) => !open)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginLeft: 12,
+              width: 30,
+              height: 30,
+              borderRadius: 999,
+              border: "1px solid rgba(148, 116, 72, 0.35)",
+              background: "rgba(255, 248, 237, 0.9)",
+              color: "rgba(92, 45, 12, 0.85)",
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            <span aria-hidden="true">✦</span>
+            {notifications.length > 0 ? (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -4,
+                  minWidth: 14,
+                  height: 14,
+                  padding: "0 4px",
+                  borderRadius: 999,
+                  background: "rgba(148, 116, 72, 0.9)",
+                  color: "white",
+                  fontSize: 10,
+                  lineHeight: "14px",
+                  textAlign: "center",
+                }}
+              >
+                {notifications.length}
+              </span>
+            ) : null}
+          </button>
+
+          {showNotifications ? (
+            <div
+              role="status"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                right: 0,
+                width: 240,
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid rgba(148, 116, 72, 0.25)",
+                background: "rgba(255, 248, 237, 0.96)",
+                color: "rgba(92, 45, 12, 0.85)",
+                fontSize: 12,
+                lineHeight: 1.4,
+                boxShadow: "0 12px 24px rgba(15, 23, 42, 0.12)",
+              }}
+            >
+              {notifications.length === 0 ? (
+                <div>Rare drops will appear here.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {notifications.map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>{item.message}</div>
+                      <button
+                        type="button"
+                        onClick={() => dismissNotification(item.id)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          color: "inherit",
+                          fontSize: 12,
+                          cursor: "pointer",
+                          opacity: 0.6,
+                        }}
+                        aria-label="Dismiss notification"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       </nav>
     </header>

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { trackPageClick, trackPageVisit } from "@/lib/track";
+import { addNotification } from "@/lib/notifications";
 
 const cafeImg =
   "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/locations/cafe.png";
@@ -13,7 +14,10 @@ export default function CafePage() {
   useEffect(() => {
     (async () => {
       try {
-        await trackPageVisit("cafe");
+        const res = await trackPageVisit("cafe");
+        if (res.randomDrop) {
+          addNotification("Rare drop found in the Cafe.");
+        }
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
       }

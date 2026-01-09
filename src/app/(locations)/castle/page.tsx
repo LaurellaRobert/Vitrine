@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { trackPageClick, trackPageVisit } from "@/lib/track";
+import { addNotification } from "@/lib/notifications";
 
 const castleImg =
   "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/locations/Castle_t.png";
@@ -13,7 +14,10 @@ export default function CastlePage() {
   useEffect(() => {
     (async () => {
       try {
-        await trackPageVisit("castle");
+        const res = await trackPageVisit("castle");
+        if (res.randomDrop) {
+          addNotification("Rare drop found in the Castle.");
+        }
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
       }
