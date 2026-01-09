@@ -81,6 +81,22 @@ export default function Navbar() {
   }
 
   const exploreActive = isAnyExploreActive(pathname);
+  const navFont = "system-ui";
+  const brandFont = "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif";
+  const itemBase = {
+    textDecoration: "none",
+    color: "inherit",
+    padding: "7px 12px",
+    borderRadius: 999,
+    border: "1px solid transparent",
+    background: "transparent",
+    letterSpacing: 0.2,
+  } as const;
+  const itemActive = {
+    border: "1px solid rgba(15, 23, 42, 0.2)",
+    background: "rgba(15, 23, 42, 0.06)",
+    fontWeight: 600,
+  } as const;
 
   return (
     <header
@@ -88,29 +104,34 @@ export default function Navbar() {
         position: "sticky",
         top: 0,
         zIndex: 10,
-        backdropFilter: "blur(10px)",
-        background: "rgba(255, 255, 255, 0.8)",
-        borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+        backdropFilter: "blur(12px)",
+        background:
+          "linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82))",
+        borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
+        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)",
       }}
     >
       <nav
         style={{
-          maxWidth: 900,
+          maxWidth: 1200,
           margin: "0 auto",
-          padding: "12px 16px",
+          padding: "14px 22px",
           display: "flex",
           alignItems: "center",
-          gap: 12,
+          gap: 14,
+          fontFamily: navFont,
         }}
       >
         <Link
           href="/"
           style={{
             fontWeight: 700,
-            marginRight: 8,
-            letterSpacing: 0.2,
+            marginRight: 10,
+            letterSpacing: 0.6,
             textDecoration: "none",
             color: "inherit",
+            fontSize: 18,
+            fontFamily: brandFont,
           }}
         >
           Vitrine
@@ -123,13 +144,8 @@ export default function Navbar() {
               key={item.href}
               href={item.href}
               style={{
-                textDecoration: "none",
-                color: "inherit",
-                padding: "6px 10px",
-                borderRadius: 10,
-                border: active ? "1px solid rgba(0, 0, 0, 0.18)" : "1px solid transparent",
-                background: active ? "rgba(0, 0, 0, 0.06)" : "transparent",
-                fontWeight: active ? 600 : 400,
+                ...itemBase,
+                ...(active ? itemActive : null),
               }}
             >
               {item.label}
@@ -144,10 +160,8 @@ export default function Navbar() {
             aria-haspopup="menu"
             aria-expanded={exploreOpen}
             style={{
-              padding: "6px 10px",
-              borderRadius: 10,
-              border: exploreActive ? "1px solid rgba(0, 0, 0, 0.18)" : "1px solid transparent",
-              background: exploreActive ? "rgba(0, 0, 0, 0.06)" : "transparent",
+              ...itemBase,
+              ...(exploreActive ? itemActive : null),
               cursor: "pointer",
               fontWeight: exploreActive ? 600 : 400,
             }}
@@ -165,9 +179,9 @@ export default function Navbar() {
                 left: 0,
                 minWidth: 180,
                 background: "rgba(255, 255, 255, 0.98)",
-                border: "1px solid rgba(0, 0, 0, 0.12)",
-                borderRadius: 12,
-                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                border: "1px solid rgba(15, 23, 42, 0.12)",
+                borderRadius: 14,
+                boxShadow: "0 16px 40px rgba(15, 23, 42, 0.16)",
                 padding: 6,
               }}
             >
@@ -184,7 +198,7 @@ export default function Navbar() {
                       borderRadius: 10,
                       textDecoration: "none",
                       color: "inherit",
-                      background: active ? "rgba(0, 0, 0, 0.06)" : "transparent",
+                      background: active ? "rgba(15, 23, 42, 0.06)" : "transparent",
                       fontWeight: active ? 600 : 400,
                     }}
                   >
@@ -201,15 +215,8 @@ export default function Navbar() {
             <Link
               href="/login"
               style={{
-                textDecoration: "none",
-                color: "inherit",
-                padding: "6px 10px",
-                borderRadius: 10,
-                border: isActivePath(pathname, "/login")
-                  ? "1px solid rgba(0, 0, 0, 0.18)"
-                  : "1px solid transparent",
-                background: isActivePath(pathname, "/login") ? "rgba(0, 0, 0, 0.06)" : "transparent",
-                fontWeight: isActivePath(pathname, "/login") ? 600 : 400,
+                ...itemBase,
+                ...(isActivePath(pathname, "/login") ? itemActive : null),
               }}
             >
               Login
@@ -218,10 +225,9 @@ export default function Navbar() {
             <button
               onClick={signOut}
               style={{
-                padding: "6px 10px",
-                borderRadius: 10,
-                border: "1px solid rgba(0, 0, 0, 0.18)",
-                background: "rgba(0, 0, 0, 0.04)",
+                ...itemBase,
+                border: "1px solid rgba(15, 23, 42, 0.18)",
+                background: "rgba(15, 23, 42, 0.04)",
                 cursor: "pointer",
               }}
             >

@@ -66,13 +66,16 @@ export default function CollectionPage() {
     page: {
       fontFamily: "system-ui",
       color: "rgba(15, 23, 42, 0.92)",
-      background: "#fbfaf7",
+      background:
+        "radial-gradient(1200px 720px at 12% 0%, rgba(231, 224, 204, 0.55), transparent 60%)," +
+        "radial-gradient(900px 600px at 88% 18%, rgba(255, 234, 208, 0.45), transparent 62%)," +
+        "linear-gradient(180deg, rgba(252, 249, 244, 1), rgba(246, 243, 235, 1))",
       minHeight: "calc(100vh - 64px)",
-      padding: "34px 16px 64px",
+      padding: "46px 20px 72px",
     },
 
     shell: {
-      maxWidth: 1080,
+      maxWidth: 1280,
       margin: "0 auto",
       display: "flex",
       flexDirection: "column",
@@ -96,9 +99,10 @@ export default function CollectionPage() {
 
     h1: {
       margin: 0,
-      fontSize: 34,
-      letterSpacing: -0.6,
+      fontSize: 40,
+      letterSpacing: -0.8,
       lineHeight: 1.1,
+      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
     },
 
     count: { color: "rgba(15, 23, 42, 0.62)", fontSize: 14 },
@@ -107,16 +111,18 @@ export default function CollectionPage() {
       margin: 0,
       color: "rgba(15, 23, 42, 0.72)",
       lineHeight: 1.7,
-      maxWidth: 860,
-      fontSize: 15,
+      maxWidth: 900,
+      fontSize: 16,
     },
 
     progressWrap: {
-      marginTop: 8,
-      padding: 12,
-      borderRadius: 14,
-      border: "1px solid rgba(15, 23, 42, 0.12)",
-      background: "rgba(255,255,255,0.92)",
+      marginTop: 12,
+      padding: "16px 18px",
+      borderRadius: 18,
+      border: "1px solid rgba(120, 90, 60, 0.22)",
+      background:
+        "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249, 242, 230, 0.96))",
+      boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -124,19 +130,49 @@ export default function CollectionPage() {
       flexWrap: "wrap",
     },
 
+    progressText: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+    },
+
+    progressLabel: {
+      fontSize: 12,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+      color: "rgba(120, 90, 60, 0.7)",
+    },
+
+    progressValue: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: "rgba(83, 46, 20, 0.92)",
+    },
+
+    progressPct: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: "rgba(120, 90, 60, 0.7)",
+      marginLeft: 8,
+    },
+
     barOuter: {
-      height: 10,
-      width: 280,
+      height: 16,
+      width: "min(520px, 100%)",
       borderRadius: 999,
-      background: "rgba(15, 23, 42, 0.12)",
+      background:
+        "linear-gradient(180deg, rgba(92, 62, 36, 0.16), rgba(92, 62, 36, 0.26))",
       overflow: "hidden",
+      boxShadow: "inset 0 1px 3px rgba(15, 23, 42, 0.18)",
     },
 
     barInner: {
       height: "100%",
       borderRadius: 999,
-      background: "rgba(15, 23, 42, 0.70)",
+      background:
+        "linear-gradient(90deg, rgba(139, 88, 46, 0.95), rgba(207, 153, 95, 0.95))",
       width: `${pct}%`,
+      boxShadow: "0 0 12px rgba(207, 153, 95, 0.35)",
     },
 
     error: {
@@ -222,6 +258,7 @@ export default function CollectionPage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(15, 23, 42, 0.58)",
+      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
     },
 
     plaque: {
@@ -316,15 +353,22 @@ export default function CollectionPage() {
     },
 
     imgWrap: {
-      width: 76,
-      height: 76,
+      width: 84,
+      height: 84,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      background: "rgba(255, 255, 255, 0.98)",
+      borderRadius: 14,
+      border: "1px solid rgba(15, 23, 42, 0.16)",
+      padding: 8,
+      boxSizing: "border-box",
     },
 
     label: {
-      fontSize: 12,
+      fontSize: 14,
+      fontFamily: "system-ui",
+      fontWeight: 600,
       textAlign: "center",
       lineHeight: 1.2,
       color: "rgba(15, 23, 42, 0.78)",
@@ -335,16 +379,16 @@ export default function CollectionPage() {
     },
 
     placeholder: {
-      width: 76,
-      height: 76,
-      borderRadius: 14,
+      width: 64,
+      height: 64,
+      borderRadius: 10,
       border: "1px dashed rgba(15, 23, 42, 0.28)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       fontSize: 12,
       color: "rgba(15, 23, 42, 0.55)",
-      background: "rgba(255,255,255,0.80)",
+      background: "rgba(255,255,255,0.92)",
     },
 
     footer: { marginTop: 18, paddingLeft: 2 },
@@ -361,15 +405,16 @@ export default function CollectionPage() {
           </div>
 
           <p style={styles.flavor}>
-            A record of what has been found so far. Uncollected items stay visible, but faded and grayscale. The cabinet
-            does not forget.
+            A record of what has been found so far. The cabinet does not forget.
           </p>
 
           <div style={styles.progressWrap}>
-            <div style={{ fontSize: 14 }}>
-              <strong>
-                {collectedCount} / {totalCount} ({pct}%)
-              </strong>
+            <div style={styles.progressText}>
+              <div style={styles.progressLabel}>Collection progress</div>
+              <div style={styles.progressValue}>
+                {collectedCount} / {totalCount} collected
+                <span style={styles.progressPct}>({pct}%)</span>
+              </div>
             </div>
             <div style={styles.barOuter} aria-hidden="true">
               <div style={styles.barInner} />
@@ -431,11 +476,11 @@ export default function CollectionPage() {
                           <Image
                             src={item.image_url}
                             alt={item.name}
-                            width={76}
-                            height={76}
+                            width={64}
+                            height={64}
                             style={{
-                              width: 76,
-                              height: 76,
+                              width: 64,
+                              height: 64,
                               objectFit: "contain",
                               filter: isCollected ? "none" : "grayscale(100%)",
                               opacity: isCollected ? 1 : 0.26,
@@ -456,9 +501,7 @@ export default function CollectionPage() {
         </section>
 
         <footer style={styles.footer}>
-          <a href="/library" style={styles.link}>
-            Go to Library
-          </a>
+          
         </footer>
       </div>
     </main>
