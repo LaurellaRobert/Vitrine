@@ -6,7 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { dismissNotification, getNotifications, subscribeNotifications, type NotificationItem } from "@/lib/notifications";
 
-const primaryItems = [{ href: "/collection", label: "Collection" }];
+const primaryItems = [
+  { href: "/collection", label: "Collection" },
+  { href: "/leaderboard", label: "Leaderboard" },
+];
 
 const exploreItems = [
   { href: "/library", label: "Library" },

@@ -8,19 +8,65 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [status, setStatus] = useState<string>("");
 
+  async function upsertDisplayName(userId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setStatus("Please enter a display name to continue.");
+      return false;
+    }
+
+    const profileRes = await supabase
+      .from("profiles")
+      .upsert({ id: userId, display_name: trimmed }, { onConflict: "id" });
+
+    if (profileRes.error) {
+      setStatus(profileRes.error.message);
+      return false;
+    }
+
+    return true;
+  }
+
   async function signUp() {
+    if (!displayName.trim()) {
+      setStatus("Please enter a display name.");
+      return;
+    }
     setStatus("Signing up...");
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: displayName.trim() } },
+    });
     if (error) return setStatus(error.message);
+    if (data.user?.id) {
+      await upsertDisplayName(data.user.id, displayName);
+    }
     setStatus("Signed up. If email confirmation is enabled, check your inbox. Otherwise, sign in.");
   }
 
   async function signIn() {
     setStatus("Signing in...");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return setStatus(error.message);
+
+    const userId = data.user?.id;
+    if (userId) {
+      const profileRes = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", userId)
+        .single();
+
+      if (!profileRes.error && !profileRes.data?.display_name) {
+        const updated = await upsertDisplayName(userId, displayName);
+        if (!updated) return;
+      }
+    }
+
     setStatus("Signed in.");
     router.push("/library");
   }
@@ -44,6 +90,14 @@ export default function LoginPage() {
         onChange={(e) => setPassword(e.target.value)}
         type="password"
         placeholder="••••••••"
+      />
+
+      <label>Display name</label>
+      <input
+        style={{ width: "100%", padding: 8, margin: "6px 0 18px" }}
+        value={displayName}
+        onChange={(e) => setDisplayName(e.target.value)}
+        placeholder="Your name"
       />
 
       <div style={{ display: "flex", gap: 10 }}>
