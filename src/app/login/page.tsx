@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     const profileRes = await supabase
       .from("profiles")
-      .upsert({ id: userId, display_name: trimmed }, { onConflict: "id" });
+      .upsert({ id: userId, display_name: trimmed, username: trimmed }, { onConflict: "id" });
 
     if (profileRes.error) {
       setStatus(profileRes.error.message);

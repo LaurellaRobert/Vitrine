@@ -9,6 +9,8 @@ type Item = {
   name: string;
   sort_order: number | null;
   image_url: string | null;
+  description: string | null;
+  collection_id: string | null;
 };
 
 type CollectedRow = {
@@ -16,13 +18,23 @@ type CollectedRow = {
 };
 
 export default function CollectionPage() {
-  const [items, setItems] = useState<Item[]>([]);
+  const [allItems, setAllItems] = useState<Item[]>([]);
+  const [collectionOptions, setCollectionOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
   const [collected, setCollected] = useState<Set<string>>(new Set());
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  const collectedCount = collected.size;
-  const totalCount = items.length;
+  const filteredItems = useMemo(() => {
+    if (!selectedCollectionId || selectedCollectionId === "all") return allItems;
+    return allItems.filter((item) => item.collection_id === selectedCollectionId);
+  }, [allItems, selectedCollectionId]);
+
+  const collectedCount = filteredItems.filter((item) => collected.has(item.id)).length;
+  const totalCount = filteredItems.length;
 
   const pct = useMemo(() => {
     if (totalCount === 0) return 0;
@@ -44,7 +56,7 @@ export default function CollectionPage() {
 
         const itemsRes = await supabase
           .from("items")
-          .select("id,name,sort_order,image_url")
+          .select("id,name,sort_order,image_url,description,collection_id")
           .order("sort_order", { ascending: true });
 
         if (itemsRes.error) throw itemsRes.error;
@@ -52,7 +64,33 @@ export default function CollectionPage() {
         const collectedRes = await supabase.from("user_collected_items").select("item_id");
         if (collectedRes.error) throw collectedRes.error;
 
-        setItems(itemsRes.data ?? []);
+        const itemsData = (itemsRes.data ?? []) as Item[];
+        setAllItems(itemsData);
+        const collectionIds = Array.from(
+          new Set(
+            itemsData
+              .map((item) => item.collection_id)
+              .filter((id): id is string => !!id)
+          )
+        );
+        if (collectionIds.length > 0) {
+          const collectionsRes = await supabase
+            .from("collections")
+            .select("id,collection_display_name")
+            .in("id", collectionIds);
+          const fetched = (collectionsRes.data ?? []).map((row) => ({
+            id: row.id as string,
+            name: (row.collection_display_name as string) ?? row.id,
+          }));
+          const fallback = collectionIds.map((id) => ({ id, name: id }));
+          const merged = fetched.length > 0 ? fetched : fallback;
+          const options = [...merged, { id: "all", name: "All collections" }];
+          setCollectionOptions(options);
+          if (!selectedCollectionId) {
+            const foodOption = options.find((option) => option.name === "Food");
+            setSelectedCollectionId(foodOption?.id ?? options[0]?.id ?? "all");
+          }
+        }
         setCollected(new Set<string>((collectedRes.data ?? []).map((r: CollectedRow) => r.item_id)));
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
@@ -122,7 +160,6 @@ export default function CollectionPage() {
       border: "1px solid rgba(120, 90, 60, 0.22)",
       background:
         "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249, 242, 230, 0.96))",
-      boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -147,6 +184,28 @@ export default function CollectionPage() {
       fontSize: 18,
       fontWeight: 700,
       color: "rgba(83, 46, 20, 0.92)",
+    },
+    filterRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 10,
+      alignItems: "center",
+      marginTop: 6,
+    },
+    pill: {
+      padding: "8px 14px",
+      borderRadius: 999,
+      border: "1px solid rgba(120, 90, 60, 0.35)",
+      background: "rgba(255, 248, 236, 1)",
+      color: "rgba(72, 42, 18, 0.92)",
+      fontSize: 13,
+      cursor: "pointer",
+      fontWeight: 600,
+    },
+    pillActive: {
+      border: "1px solid rgba(156, 108, 62, 0.7)",
+      background: "rgba(255, 235, 206, 1)",
+      boxShadow: "0 6px 14px rgba(120, 90, 60, 0.18)",
     },
 
     progressPct: {
@@ -232,6 +291,7 @@ export default function CollectionPage() {
       border: "1px solid rgba(0,0,0,0.20)",
       padding: "18px 16px 16px",
       background: "linear-gradient(180deg, rgba(206, 165, 120, 0.92), rgba(191, 147, 102, 0.92))",
+      overflow: "visible",
     },
 
     innerTrim: {
@@ -299,7 +359,7 @@ export default function CollectionPage() {
       padding: 14,
       border: "1px solid rgba(0,0,0,0.18)",
       background: "linear-gradient(180deg, rgba(178, 131, 88, 0.55), rgba(160, 115, 76, 0.55))",
-      overflow: "hidden",
+      overflow: "visible",
     },
 
     shelfLines: {
@@ -307,16 +367,7 @@ export default function CollectionPage() {
       inset: 0,
       pointerEvents: "none",
       opacity: 0.78,
-      background:
-        "repeating-linear-gradient(" +
-        "180deg," +
-        "rgba(0,0,0,0.00) 0px," +
-        "rgba(0,0,0,0.00) 132px," +
-        "rgba(86, 52, 26, 0.35) 132px," +
-        "rgba(86, 52, 26, 0.35) 140px," +
-        "rgba(255, 226, 170, 0.18) 140px," +
-        "rgba(255, 226, 170, 0.18) 146px" +
-        ")",
+      background: "transparent",
     },
 
     shelfLip: {
@@ -335,7 +386,7 @@ export default function CollectionPage() {
       display: "grid",
       gap: 14,
       gridTemplateColumns: "repeat(8, 1fr)",
-      gridAutoRows: 132,
+      gridAutoRows: 150,
       alignItems: "stretch",
     },
 
@@ -350,6 +401,37 @@ export default function CollectionPage() {
       justifyContent: "center",
       gap: 9,
       userSelect: "none",
+      position: "relative",
+    },
+    tooltip: {
+      position: "absolute",
+      left: "50%",
+      bottom: "calc(100% + 10px)",
+      transform: "translateX(-50%)",
+      minWidth: 160,
+      maxWidth: 200,
+      padding: "8px 10px",
+      borderRadius: 10,
+      border: "1px solid rgba(120, 90, 60, 0.35)",
+      background: "rgba(255, 248, 236, 0.98)",
+      color: "rgba(72, 42, 18, 0.9)",
+      fontSize: 12,
+      lineHeight: 1.4,
+      textAlign: "center",
+      boxShadow: "0 10px 20px rgba(52, 30, 14, 0.15)",
+      zIndex: 5,
+      pointerEvents: "none",
+    },
+    tooltipArrow: {
+      position: "absolute",
+      left: "50%",
+      bottom: -6,
+      width: 10,
+      height: 10,
+      background: "rgba(255, 248, 236, 0.98)",
+      borderLeft: "1px solid rgba(120, 90, 60, 0.35)",
+      borderBottom: "1px solid rgba(120, 90, 60, 0.35)",
+      transform: "translateX(-50%) rotate(45deg)",
     },
 
     imgWrap: {
@@ -374,8 +456,9 @@ export default function CollectionPage() {
       color: "rgba(15, 23, 42, 0.78)",
       maxWidth: 96,
       overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
+      display: "-webkit-box",
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: "vertical",
     },
 
     placeholder: {
@@ -407,6 +490,25 @@ export default function CollectionPage() {
           <p style={styles.flavor}>
             A record of what has been found so far. The cabinet does not forget.
           </p>
+
+          <div style={styles.filterRow}>
+            <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6, color: "rgba(120, 90, 60, 0.7)" }}>
+              Collection
+            </div>
+            {collectionOptions.map((option) => {
+              const isActive = option.id === selectedCollectionId;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSelectedCollectionId(option.id)}
+                  style={{ ...styles.pill, ...(isActive ? styles.pillActive : null) }}
+                >
+                  {option.name}
+                </button>
+              );
+            })}
+          </div>
 
           <div style={styles.progressWrap}>
             <div style={styles.progressText}>
@@ -459,8 +561,9 @@ export default function CollectionPage() {
               <div style={styles.shelfLip} aria-hidden="true" />
 
               <div style={styles.grid}>
-                {items.map((item, idx) => {
+                {filteredItems.map((item, idx) => {
                   const isCollected = collected.has(item.id);
+                  const isHovered = hoveredItemId === item.id;
 
                   return (
                     <div
@@ -469,8 +572,16 @@ export default function CollectionPage() {
                         ...styles.slot,
                         background: isCollected ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.90)",
                       }}
+                      onMouseEnter={() => setHoveredItemId(item.id)}
+                      onMouseLeave={() => setHoveredItemId(null)}
                       title={item.name}
                     >
+                      {isHovered && item.description ? (
+                        <div style={styles.tooltip}>
+                          {item.description}
+                          <span style={styles.tooltipArrow} />
+                        </div>
+                      ) : null}
                       <div style={styles.imgWrap}>
                         {item.image_url ? (
                           <Image

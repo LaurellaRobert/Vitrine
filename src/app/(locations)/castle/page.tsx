@@ -10,13 +10,17 @@ const castleImg =
 
 export default function CastlePage() {
   const [error, setError] = useState<string>("");
+  const [dropBanner, setDropBanner] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await trackPageVisit("castle");
-        if (res.randomDrop) {
-          addNotification("Rare drop found in the Castle.");
+        if (res.unlockedCount > 0) {
+          setDropBanner(true);
+          for (let i = 0; i < res.unlockedCount; i += 1) {
+            addNotification("You found a new item in the Castle.");
+          }
         }
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
@@ -26,7 +30,13 @@ export default function CastlePage() {
 
   async function onClickAnywhere() {
     try {
-      await trackPageClick("castle");
+      const res = await trackPageClick("castle");
+      if (res.unlockedCount > 0) {
+        setDropBanner(true);
+        for (let i = 0; i < res.unlockedCount; i += 1) {
+          addNotification("You found a new item in the Castle.");
+        }
+      }
     } catch (e: any) {
       setError(e?.message ?? "Unknown error");
     }
@@ -48,23 +58,24 @@ export default function CastlePage() {
       }}
     >
       <section style={{ maxWidth: 1280, margin: "0 auto" }}>
+        {dropBanner ? (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: "1px solid rgba(191, 147, 102, 0.4)",
+              background: "rgba(255, 245, 228, 0.9)",
+              color: "rgba(92, 45, 12, 0.9)",
+              fontSize: 14,
+            }}
+          >
+            You found a new item in the Castle.
+          </div>
+        ) : null}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "stretch" }}>
           <div style={{ flex: "1 1 420px", minWidth: 320 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div
-                style={{
-                  width: "fit-content",
-                  padding: "9px 14px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(15, 23, 42, 0.12)",
-                  background: "rgba(255,255,255,0.88)",
-                  fontSize: 13,
-                  color: "rgba(15, 23, 42, 0.74)",
-                }}
-              >
-                Location: Castle
-              </div>
-
               <h1
                 style={{
                   margin: 0,

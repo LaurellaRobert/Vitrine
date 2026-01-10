@@ -3,17 +3,25 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { trackPageClick, trackPageVisit } from "@/lib/track";
+import { addNotification } from "@/lib/notifications";
 
 const gardenImg =
   "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/locations/garden.webp";
 
 export default function GardenPage() {
   const [error, setError] = useState<string>("");
+  const [dropBanner, setDropBanner] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
       try {
-        await trackPageVisit("garden");
+        const res = await trackPageVisit("garden");
+        if (res.unlockedCount > 0) {
+          setDropBanner(true);
+          for (let i = 0; i < res.unlockedCount; i += 1) {
+            addNotification("You found a new item in the Garden.");
+          }
+        }
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
       }
@@ -22,7 +30,13 @@ export default function GardenPage() {
 
   async function onClickAnywhere() {
     try {
-      await trackPageClick("garden");
+      const res = await trackPageClick("garden");
+      if (res.unlockedCount > 0) {
+        setDropBanner(true);
+        for (let i = 0; i < res.unlockedCount; i += 1) {
+          addNotification("You found a new item in the Garden.");
+        }
+      }
     } catch (e: any) {
       setError(e?.message ?? "Unknown error");
     }
@@ -44,23 +58,24 @@ export default function GardenPage() {
       }}
     >
       <section style={{ maxWidth: 1280, margin: "0 auto" }}>
+        {dropBanner ? (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: "1px solid rgba(191, 147, 102, 0.4)",
+              background: "rgba(255, 245, 228, 0.9)",
+              color: "rgba(92, 45, 12, 0.9)",
+              fontSize: 14,
+            }}
+          >
+            You found a new item in the Garden.
+          </div>
+        ) : null}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "stretch" }}>
           <div style={{ flex: "1 1 420px", minWidth: 320 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div
-                style={{
-                  width: "fit-content",
-                  padding: "9px 14px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(22, 84, 52, 0.14)",
-                  background: "rgba(255,255,255,0.88)",
-                  fontSize: 13,
-                  color: "rgba(16, 72, 45, 0.76)",
-                }}
-              >
-                Location: Garden
-              </div>
-
               <h1
                 style={{
                   margin: 0,

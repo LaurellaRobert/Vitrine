@@ -10,15 +10,17 @@ const libraryImg =
 
 export default function LibraryPage() {
   const [error, setError] = useState<string>("");
-  const [sequenceDropHint, setSequenceDropHint] = useState<boolean>(false);
+  const [dropBanner, setDropBanner] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await trackPageVisit("library");
-        if (res.sequenceDrop) {
-          setSequenceDropHint(true);
-          addNotification("Rare drop found in the Library.");
+        if (res.unlockedCount > 0) {
+          setDropBanner(true);
+          for (let i = 0; i < res.unlockedCount; i += 1) {
+            addNotification("You found a new item in the Library.");
+          }
         }
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
@@ -28,7 +30,13 @@ export default function LibraryPage() {
 
   async function onClickAnywhere() {
     try {
-      await trackPageClick("library");
+      const res = await trackPageClick("library");
+      if (res.unlockedCount > 0) {
+        setDropBanner(true);
+        for (let i = 0; i < res.unlockedCount; i += 1) {
+          addNotification("You found a new item in the Library.");
+        }
+      }
     } catch (e: any) {
       setError(e?.message ?? "Unknown error");
     }
@@ -46,23 +54,24 @@ export default function LibraryPage() {
       }}
     >
       <section>
+        {dropBanner ? (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: "1px solid rgba(191, 147, 102, 0.4)",
+              background: "rgba(255, 245, 228, 0.9)",
+              color: "rgba(92, 45, 12, 0.9)",
+              fontSize: 14,
+            }}
+          >
+            You found a new item in the Library.
+          </div>
+        ) : null}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "stretch" }}>
           <div style={{ flex: "1 1 420px", minWidth: 320 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div
-                style={{
-                  width: "fit-content",
-                  padding: "9px 14px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(51, 65, 85, 0.18)",
-                  background: "rgba(255,255,255,0.88)",
-                  fontSize: 13,
-                  color: "rgba(30, 41, 59, 0.76)",
-                }}
-              >
-                Location: Library
-              </div>
-
               <h1
                 style={{
                   margin: 0,
@@ -82,21 +91,6 @@ export default function LibraryPage() {
               <p style={{ margin: 0, color: "rgba(30, 41, 59, 0.70)", lineHeight: 1.7, maxWidth: 520 }}>
                 Pages crackle softly when you pass. Some spines are warm, as if recently handled.
               </p>
-              {sequenceDropHint ? (
-                <div
-                  style={{
-                    marginTop: 6,
-                    padding: "8px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(191, 147, 102, 0.4)",
-                    background: "rgba(255, 245, 228, 0.9)",
-                    color: "rgba(92, 45, 12, 0.9)",
-                    fontSize: 14,
-                  }}
-                >
-                  Rare drop!
-                </div>
-              ) : null}
             </div>
           </div>
 
