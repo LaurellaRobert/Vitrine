@@ -8,6 +8,7 @@ type Item = {
   id: string;
   name: string;
   sort_order: number | null;
+  rarity: number | null;
   image_url: string | null;
   description: string | null;
   collection_id: string | null;
@@ -25,13 +26,33 @@ export default function CollectionPage() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
   const [collected, setCollected] = useState<Set<string>>(new Set());
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [raritySort, setRaritySort] = useState<"asc" | "desc">("asc");
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (!selectedItem) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedItem(null);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [selectedItem]);
+
   const filteredItems = useMemo(() => {
-    if (!selectedCollectionId || selectedCollectionId === "all") return allItems;
-    return allItems.filter((item) => item.collection_id === selectedCollectionId);
-  }, [allItems, selectedCollectionId]);
+    const base =
+      !selectedCollectionId || selectedCollectionId === "all"
+        ? allItems
+        : allItems.filter((item) => item.collection_id === selectedCollectionId);
+    return [...base].sort((a, b) => {
+      const aVal = a.rarity ?? 0;
+      const bVal = b.rarity ?? 0;
+      return raritySort === "asc" ? aVal - bVal : bVal - aVal;
+    });
+  }, [allItems, selectedCollectionId, raritySort]);
 
   const collectedCount = filteredItems.filter((item) => collected.has(item.id)).length;
   const totalCount = filteredItems.length;
@@ -42,22 +63,26 @@ export default function CollectionPage() {
   }, [collectedCount, totalCount]);
 
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let authTimer: ReturnType<typeof setTimeout> | null = null;
+    let authSub: ReturnType<typeof supabase.auth.onAuthStateChange> | null = null;
+    const cacheKey = "vitrine.collection.cache";
+    const cacheUserKey = "vitrine.collection.cacheUser";
+
+    const fetchAll = async (attempt: number) => {
+      if (!mounted) return;
+      setLoading(true);
+
       try {
-        setLoading(true);
-
-        const { data: authData, error: authErr } = await supabase.auth.getUser();
-        if (authErr) throw authErr;
-
-        if (!authData.user) {
-          setError("Not signed in. Go to /login");
-          return;
-        }
+        const { data: sessionData } = await supabase.auth.getSession();
+        const currentUserId = sessionData.session?.user?.id ?? null;
 
         const itemsRes = await supabase
           .from("items")
-          .select("id,name,sort_order,image_url,description,collection_id")
-          .order("sort_order", { ascending: true });
+          .select("id,name,sort_order,rarity,image_url,description,collection_id")
+          .order("rarity", { ascending: true, nullsFirst: false })
+          .order("sort_order", { ascending: true, nullsFirst: false });
 
         if (itemsRes.error) throw itemsRes.error;
 
@@ -65,6 +90,16 @@ export default function CollectionPage() {
         if (collectedRes.error) throw collectedRes.error;
 
         const itemsData = (itemsRes.data ?? []) as Item[];
+        if (itemsData.length === 0 && attempt < 2) {
+          const delayMs = attempt === 0 ? 1200 : 2000;
+          retryTimer = setTimeout(() => {
+            fetchAll(attempt + 1).catch((err) => {
+              if (mounted) setError(err?.message ?? "Unknown error");
+            });
+          }, delayMs);
+          return;
+        }
+
         setAllItems(itemsData);
         const collectionIds = Array.from(
           new Set(
@@ -73,6 +108,9 @@ export default function CollectionPage() {
               .filter((id): id is string => !!id)
           )
         );
+        let optionsToCache: { id: string; name: string }[] | undefined;
+        let selectedToCache: string | null = selectedCollectionId ?? null;
+
         if (collectionIds.length > 0) {
           const collectionsRes = await supabase
             .from("collections")
@@ -85,19 +123,142 @@ export default function CollectionPage() {
           const fallback = collectionIds.map((id) => ({ id, name: id }));
           const merged = fetched.length > 0 ? fetched : fallback;
           const options = [...merged, { id: "all", name: "All collections" }];
+          optionsToCache = options;
           setCollectionOptions(options);
           if (!selectedCollectionId) {
             const foodOption = options.find((option) => option.name === "Food");
-            setSelectedCollectionId(foodOption?.id ?? options[0]?.id ?? "all");
+            const nextSelected = foodOption?.id ?? options[0]?.id ?? "all";
+            setSelectedCollectionId(nextSelected);
+            selectedToCache = nextSelected;
           }
         }
         setCollected(new Set<string>((collectedRes.data ?? []).map((r: CollectedRow) => r.item_id)));
-      } catch (e: any) {
-        setError(e?.message ?? "Unknown error");
-      } finally {
+        try {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              items: itemsData,
+              collected: (collectedRes.data ?? []).map((r: CollectedRow) => r.item_id),
+              options: optionsToCache,
+              selected: selectedToCache,
+            })
+          );
+          if (currentUserId) {
+            sessionStorage.setItem(cacheUserKey, currentUserId);
+          }
+        } catch {
+          // Ignore cache write failures (private mode, storage limits).
+        }
         setLoading(false);
+      } catch (e: any) {
+        if (mounted) {
+          setError(e?.message ?? "Unknown error");
+          setLoading(false);
+        }
       }
-    })();
+    };
+
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const waitForSession = async (refreshFirst: boolean) => {
+      if (refreshFirst) {
+        await supabase.auth.refreshSession();
+      }
+
+      for (let i = 0; i < 4; i += 1) {
+        if (!mounted) return false;
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          return true;
+        }
+        await delay(250);
+      }
+
+      return false;
+    };
+
+    const fetchIfAuthed = async (showAuthError: boolean, refreshFirst = false) => {
+      const hasSession = await waitForSession(refreshFirst);
+      if (hasSession) {
+        fetchAll(0).catch((err) => setError(err?.message ?? "Unknown error"));
+        return;
+      }
+
+      if (showAuthError) {
+        setLoading(true);
+        authTimer = setTimeout(() => {
+          if (mounted) {
+            setError("Not signed in. Go to /login");
+            setLoading(false);
+          }
+        }, 1500);
+      }
+    };
+
+    const start = async () => {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const cachedUser = sessionStorage.getItem(cacheUserKey);
+          const { data: sessionData } = await supabase.auth.getSession();
+          const currentUserId = sessionData.session?.user?.id ?? null;
+          if (!cachedUser || !currentUserId || cachedUser === currentUserId) {
+            const parsed = JSON.parse(cached) as {
+              items?: Item[];
+              collected?: string[];
+              options?: { id: string; name: string }[];
+              selected?: string | null;
+            };
+            if (parsed.items && parsed.items.length > 0) {
+              setAllItems(parsed.items);
+              setCollected(new Set<string>(parsed.collected ?? []));
+              if (parsed.options && parsed.options.length > 0) {
+                setCollectionOptions(parsed.options);
+              }
+              if (parsed.selected) {
+                setSelectedCollectionId(parsed.selected);
+              }
+              setLoading(false);
+            }
+          }
+        }
+      } catch {
+        // Ignore cache read failures.
+      }
+
+      await fetchIfAuthed(true);
+
+      authSub = supabase.auth.onAuthStateChange((event, session) => {
+        if (!mounted) return;
+        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+          if (authTimer) clearTimeout(authTimer);
+          fetchAll(0).catch((err) => setError(err?.message ?? "Unknown error"));
+        }
+      });
+    };
+
+    const handleFocus = () => {
+      fetchIfAuthed(false, true).catch((err) => setError(err?.message ?? "Unknown error"));
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchIfAuthed(false, true).catch((err) => setError(err?.message ?? "Unknown error"));
+      }
+    };
+
+    start().catch((err) => setError(err?.message ?? "Unknown error"));
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      mounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (authTimer) clearTimeout(authTimer);
+      if (authSub) authSub.data.subscription.unsubscribe();
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const styles: Record<string, React.CSSProperties> = {
@@ -191,6 +352,23 @@ export default function CollectionPage() {
       gap: 10,
       alignItems: "center",
       marginTop: 6,
+    },
+    filterSpacer: {
+      flex: 1,
+      minWidth: 20,
+    },
+    sortRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+      alignItems: "center",
+      marginTop: 6,
+    },
+    sortLabel: {
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+      color: "rgba(120, 90, 60, 0.7)",
     },
     pill: {
       padding: "8px 14px",
@@ -474,6 +652,166 @@ export default function CollectionPage() {
       background: "rgba(255,255,255,0.92)",
     },
 
+    modalOverlay: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(30, 24, 18, 0.35)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      zIndex: 40,
+    },
+    modalCard: {
+      width: "min(640px, 92vw)",
+      maxHeight: "90vh",
+      borderRadius: 22,
+      border: "1px solid rgba(110, 72, 38, 0.5)",
+      background: "rgba(208, 166, 122, 0.98)",
+      backgroundImage:
+        "repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, rgba(86, 52, 24, 0.18) 3px, rgba(86, 52, 24, 0.18) 7px)," +
+        "radial-gradient(circle at 18% 15%, rgba(255, 222, 178, 0.45), transparent 45%)," +
+        "radial-gradient(circle at 85% 20%, rgba(255, 235, 200, 0.35), transparent 55%)",
+      padding: "22px 24px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 18,
+      overflowY: "auto",
+    },
+    modalHeader: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 10,
+    },
+    modalCloseRow: {
+      width: "100%",
+      display: "flex",
+      justifyContent: "flex-end",
+    },
+    modalTitle: {
+      margin: 0,
+      fontSize: 30,
+      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
+      color: "rgba(35, 22, 12, 0.92)",
+      textAlign: "center",
+    },
+    modalTitlePlaque: {
+      alignSelf: "center",
+      width: "min(420px, 90%)",
+      padding: "10px 20px",
+      borderRadius: 999,
+      border: "1px solid rgba(184, 135, 46, 0.7)",
+      background:
+        "radial-gradient(circle at 20% 30%, rgb(255, 246, 220), rgb(224, 170, 64) 55%)," +
+        "linear-gradient(160deg, rgb(252, 226, 170), rgb(198, 146, 50))",
+      color: "rgba(78, 52, 20, 0.95)",
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -2px 0 rgba(132, 84, 18, 0.6)",
+      position: "relative",
+      textAlign: "center",
+    },
+    modalTitlePlaqueTrim: {
+      position: "absolute",
+      inset: 3,
+      borderRadius: 999,
+      border: "1px solid rgba(164, 112, 30, 0.65)",
+      boxShadow:
+        "inset 0 0 0 1px rgba(255, 248, 220, 0.45), inset 0 -1px 0 rgba(114, 72, 20, 0.35)",
+      pointerEvents: "none",
+    },
+    modalTitlePlaqueOrnament: {
+      position: "absolute",
+      top: "50%",
+      width: 10,
+      height: 10,
+      borderRadius: 999,
+      border: "1px solid rgba(164, 112, 30, 0.75)",
+      background:
+        "radial-gradient(circle at 30% 30%, rgb(255, 245, 212), rgb(190, 132, 40))",
+      transform: "translateY(-50%)",
+      pointerEvents: "none",
+    },
+    modalClose: {
+      border: "1px solid rgba(120, 90, 60, 0.35)",
+      background: "rgba(255,255,255,0.9)",
+      borderRadius: 999,
+      width: 28,
+      height: 28,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 16,
+      cursor: "pointer",
+      fontWeight: 600,
+      color: "rgba(78, 54, 30, 0.9)",
+    },
+    modalImageWrap: {
+      borderRadius: 18,
+      border: "1px solid rgba(120, 90, 60, 0.28)",
+      background: "rgba(246, 236, 222, 0.98)",
+      backgroundImage:
+        "repeating-linear-gradient(120deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 3px, rgba(112, 76, 44, 0.04) 4px, rgba(112, 76, 44, 0.04) 9px)",
+      padding: 18,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      overflow: "hidden",
+    },
+    modalFrame: {
+      position: "absolute",
+      inset: 10,
+      borderRadius: 14,
+      border: "1px solid rgba(120, 90, 60, 0.35)",
+      background: "rgba(255, 255, 255, 0.55)",
+      pointerEvents: "none",
+    },
+    modalImageMat: {
+      borderRadius: 14,
+      border: "1px solid rgba(120, 90, 60, 0.22)",
+      background: "rgba(255, 255, 255, 0.95)",
+      padding: 18,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      zIndex: 1,
+      width: "min(320px, 80vw)",
+      maxHeight: "min(320px, 60vh)",
+      boxSizing: "border-box",
+    },
+    modalTag: {
+      alignSelf: "flex-start",
+      padding: "6px 10px",
+      borderRadius: 999,
+      border: "1px solid rgba(120, 90, 60, 0.35)",
+      background: "rgba(255, 250, 242, 0.95)",
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      fontSize: 11,
+      color: "rgba(78, 54, 30, 0.8)",
+      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
+    },
+    modalTagRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+      justifyContent: "center",
+    },
+    modalDesc: {
+      margin: 0,
+      fontSize: 14,
+      lineHeight: 1.7,
+      color: "rgba(35, 22, 12, 0.72)",
+    },
+    modalDescPill: {
+      borderRadius: 14,
+      border: "1px solid rgba(120, 90, 60, 0.22)",
+      background: "rgba(255, 252, 247, 0.98)",
+      padding: "12px 14px",
+    },
+
     footer: { marginTop: 18, paddingLeft: 2 },
     link: { color: "inherit" },
   };
@@ -508,6 +846,22 @@ export default function CollectionPage() {
                 </button>
               );
             })}
+            <div style={styles.filterSpacer} aria-hidden="true" />
+            <div style={styles.sortLabel}>SORT BY RARITY</div>
+            <button
+              type="button"
+              onClick={() => setRaritySort("asc")}
+              style={{ ...styles.pill, ...(raritySort === "asc" ? styles.pillActive : null) }}
+            >
+              Ascending
+            </button>
+            <button
+              type="button"
+              onClick={() => setRaritySort("desc")}
+              style={{ ...styles.pill, ...(raritySort === "desc" ? styles.pillActive : null) }}
+            >
+              Descending
+            </button>
           </div>
 
           <div style={styles.progressWrap}>
@@ -571,9 +925,11 @@ export default function CollectionPage() {
                       style={{
                         ...styles.slot,
                         background: isCollected ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.90)",
+                        cursor: "pointer",
                       }}
                       onMouseEnter={() => setHoveredItemId(item.id)}
                       onMouseLeave={() => setHoveredItemId(null)}
+                      onClick={() => setSelectedItem(item)}
                       title={item.name}
                     >
                       {isHovered && item.description ? (
@@ -615,6 +971,61 @@ export default function CollectionPage() {
           
         </footer>
       </div>
+
+      {selectedItem ? (
+        <div style={styles.modalOverlay} onClick={() => setSelectedItem(null)}>
+          <div style={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div style={styles.modalCloseRow}>
+                <button type="button" style={styles.modalClose} onClick={() => setSelectedItem(null)}>
+                  ×
+                </button>
+              </div>
+            </div>
+            <div style={styles.modalImageWrap}>
+              <div style={styles.modalFrame} aria-hidden="true" />
+              <div style={styles.modalImageMat}>
+                {selectedItem.image_url ? (
+                  <Image
+                    src={selectedItem.image_url}
+                    alt={selectedItem.name}
+                    width={500}
+                    height={500}
+                    style={{
+                      maxWidth: 300,
+                      maxHeight: 300,
+                      width: "auto",
+                      height: "auto",
+                      objectFit: "contain",
+                      filter: collected.has(selectedItem.id) ? "none" : "grayscale(100%)",
+                      opacity: collected.has(selectedItem.id) ? 1 : 0.26,
+                    }}
+                  />
+                ) : (
+                  <div style={styles.placeholder}>No image</div>
+                )}
+              </div>
+            </div>
+            <div style={styles.modalTitlePlaque}>
+              <div style={styles.modalTitlePlaqueTrim} aria-hidden="true" />
+              <div style={{ ...styles.modalTitlePlaqueOrnament, left: 12 }} aria-hidden="true" />
+              <div style={{ ...styles.modalTitlePlaqueOrnament, right: 12 }} aria-hidden="true" />
+              <h2 style={styles.modalTitle}>{selectedItem.name}</h2>
+            </div>
+            <div style={styles.modalTagRow}>
+              <div style={styles.modalTag}>
+                {collectionOptions.find((option) => option.id === selectedItem.collection_id)?.name ?? "Unsorted"}
+              </div>
+              <div style={styles.modalTag}>Rarity: {selectedItem.rarity ?? 0}</div>
+            </div>
+            <div style={styles.modalDescPill}>
+              <p style={styles.modalDesc}>
+                {selectedItem.description ? selectedItem.description : "No flavor text yet."}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
