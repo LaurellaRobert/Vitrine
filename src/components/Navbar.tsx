@@ -17,7 +17,8 @@ const exploreItems = [
   { href: "/cafe", label: "Cafe" },
   { href: "/castle", label: "Castle" },
   { href: "/garden", label: "Garden" },
-  { href: "/great_hall", label: "Great Hall"},
+  { href: "/great_hall", label: "Great Hall" },
+  { href: "/fountain", label: "Fountain" },
 ];
 
 function isActivePath(pathname: string, href: string) {
@@ -251,17 +252,16 @@ export default function Navbar() {
                 position: "absolute",
                 top: "calc(100% + 8px)",
                 left: 0,
-                minWidth: 180,
+                minWidth: 320,
                 background:
                   "linear-gradient(180deg, rgba(129, 78, 41, 0.98), rgba(92, 54, 28, 0.98))",
                 border: "1px solid rgba(52, 30, 14, 0.6)",
                 borderRadius: 14,
                 boxShadow: "0 16px 40px rgba(52, 30, 14, 0.4)",
-                padding: 10,
-                minWidth: 210,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
+                padding: 16,
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(150px, 1fr))",
+                gap: 10,
                 zIndex: 2,
               }}
             >
@@ -274,16 +274,17 @@ export default function Navbar() {
                     role="menuitem"
                     style={{
                       display: "block",
-                      padding: "10px 12px",
-                      borderRadius: 12,
+                      padding: "12px 14px",
+                      borderRadius: 14,
                       textDecoration: "none",
                       color: "rgba(72, 42, 18, 0.92)",
                       background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
                       border: "1px solid rgba(120, 78, 40, 0.35)",
                       fontWeight: active ? 600 : 500,
+                      textAlign: "center",
                     }}
                   >
-                    <span style={{ fontSize: 13, letterSpacing: 0.3 }}>{item.label}</span>
+                    <span style={{ fontSize: 14, letterSpacing: 0.4 }}>{item.label}</span>
                   </Link>
                 );
               })}
