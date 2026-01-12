@@ -13,17 +13,20 @@ const primaryItems = [
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
-const exploreItems = [
+const locationItems = [
   { href: "/library", label: "Library" },
   { href: "/museum", label: "Museum" },
   { href: "/cafe", label: "Cafe" },
   { href: "/castle", label: "Castle" },
   { href: "/garden", label: "Garden" },
   { href: "/great_hall", label: "Great Hall" },
+];
+
+const activityItems = [
   { href: "/fountain", label: "Fountain" },
   { href: "/well", label: "Well" },
   { href: "/sanctum", label: "Sanctum" },
-  { href: "/battle", label: "Marionette Ring" },
+  { href: "/battle", label: "Battle Arena" },
 ];
 
 const shopItems = [
@@ -36,7 +39,7 @@ function isActivePath(pathname: string, href: string) {
 }
 
 function isAnyExploreActive(pathname: string) {
-  return exploreItems.some((x) => isActivePath(pathname, x.href));
+  return [...locationItems, ...activityItems].some((x) => isActivePath(pathname, x.href));
 }
 
 function isAnyShopActive(pathname: string) {
@@ -311,7 +314,7 @@ export default function Navbar() {
                 position: "absolute",
                 top: "calc(100% + 8px)",
                 left: 0,
-                minWidth: 320,
+                minWidth: 360,
                 background:
                   "linear-gradient(180deg, rgba(129, 78, 41, 0.98), rgba(92, 54, 28, 0.98))",
                 border: "1px solid rgba(52, 30, 14, 0.6)",
@@ -319,34 +322,81 @@ export default function Navbar() {
                 boxShadow: "0 16px 40px rgba(52, 30, 14, 0.4)",
                 padding: 16,
                 display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(150px, 1fr))",
-                gap: 10,
+                gridTemplateColumns: "repeat(2, minmax(160px, 1fr))",
+                gap: 12,
                 zIndex: 2,
               }}
             >
-              {exploreItems.map((item) => {
-                const active = isActivePath(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    role="menuitem"
-                    style={{
-                      display: "block",
-                      padding: "12px 14px",
-                      borderRadius: 14,
-                      textDecoration: "none",
-                      color: "rgba(72, 42, 18, 0.92)",
-                      background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
-                      border: "1px solid rgba(120, 78, 40, 0.35)",
-                      fontWeight: active ? 600 : 500,
-                      textAlign: "center",
-                    }}
-                  >
-                    <span style={{ fontSize: 14, letterSpacing: 0.4 }}>{item.label}</span>
-                  </Link>
-                );
-              })}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.6,
+                    color: "rgba(255, 234, 209, 0.8)",
+                  }}
+                >
+                  Locations
+                </div>
+                {locationItems.map((item) => {
+                  const active = isActivePath(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      style={{
+                        display: "block",
+                        padding: "12px 14px",
+                        borderRadius: 14,
+                        textDecoration: "none",
+                        color: "rgba(72, 42, 18, 0.92)",
+                        background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
+                        border: "1px solid rgba(120, 78, 40, 0.35)",
+                        fontWeight: active ? 600 : 500,
+                        textAlign: "center",
+                      }}
+                    >
+                      <span style={{ fontSize: 14, letterSpacing: 0.4 }}>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.6,
+                    color: "rgba(255, 234, 209, 0.8)",
+                  }}
+                >
+                  Activities
+                </div>
+                {activityItems.map((item) => {
+                  const active = isActivePath(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      style={{
+                        display: "block",
+                        padding: "12px 14px",
+                        borderRadius: 14,
+                        textDecoration: "none",
+                        color: "rgba(72, 42, 18, 0.92)",
+                        background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
+                        border: "1px solid rgba(120, 78, 40, 0.35)",
+                        fontWeight: active ? 600 : 500,
+                        textAlign: "center",
+                      }}
+                    >
+                      <span style={{ fontSize: 14, letterSpacing: 0.4 }}>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
         </div>
