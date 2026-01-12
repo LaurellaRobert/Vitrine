@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getAccessToken, getUserId, restFetch } from "@/lib/supabaseRest";
 
 type Item = {
   id: string;
@@ -31,49 +31,46 @@ export default function ProfilePage() {
     (async () => {
       try {
         setLoading(true);
-        const { data: authData } = await supabase.auth.getUser();
-        const user = authData?.user;
-        if (!user) {
+        const userId = getUserId();
+        const token = getAccessToken();
+        if (!userId || !token) {
           setStatus("You need to sign in to edit your profile.");
           return;
         }
 
-        setUserId(user.id);
+        setUserId(userId);
 
-        const profileRes = await supabase
-          .from("profiles")
-          .select("display_name,bio,featured_item_ids")
-          .eq("id", user.id)
-          .limit(1);
-
-        if (profileRes.error) throw profileRes.error;
-
-        const profile = (profileRes.data?.[0] ?? null) as ProfileRow | null;
+        const profileRes = await restFetch<ProfileRow[]>(
+          "profiles",
+          {
+            select: "display_name,bio,featured_item_ids",
+            id: `eq.${userId}`,
+            limit: "1",
+          },
+          { token }
+        );
+        const profile = (profileRes?.[0] ?? null) as ProfileRow | null;
         setDisplayName(profile?.display_name ?? "");
         setBio(profile?.bio ?? "");
         setFeaturedIds(profile?.featured_item_ids ?? []);
 
-        const collectedRes = await supabase
-          .from("user_collected_items")
-          .select("item_id")
-          .eq("user_id", user.id);
-
-        if (collectedRes.error) throw collectedRes.error;
-
-        const itemIds = (collectedRes.data ?? []).map((row) => row.item_id).filter(Boolean);
+        const collectedRes = await restFetch<{ item_id: string }[]>(
+          "user_collected_items",
+          { select: "item_id", user_id: `eq.${userId}` },
+          { token }
+        );
+        const itemIds = (collectedRes ?? []).map((row) => row.item_id).filter(Boolean);
         if (itemIds.length === 0) {
           setItems([]);
           return;
         }
 
-        const itemsRes = await supabase
-          .from("items")
-          .select("id,name,image_url,sort_order")
-          .in("id", itemIds)
-          .order("sort_order", { ascending: true });
-
-        if (itemsRes.error) throw itemsRes.error;
-        setItems((itemsRes.data ?? []) as Item[]);
+        const itemsRes = await restFetch<Item[]>(
+          "items",
+          { select: "id,name,image_url,sort_order", id: `in.(${itemIds.join(",")})`, order: "sort_order.asc" },
+          { token }
+        );
+        setItems((itemsRes ?? []) as Item[]);
       } catch (e: any) {
         setStatus(e?.message ?? "Unknown error");
       } finally {
@@ -99,21 +96,30 @@ export default function ProfilePage() {
       return;
     }
     setStatus("Saving...");
-    const res = await supabase
-      .from("profiles")
-      .upsert(
+    const token = getAccessToken();
+    if (!token) {
+      setStatus("You need to sign in to edit your profile.");
+      return;
+    }
+    try {
+      await restFetch(
+        "profiles",
+        { on_conflict: "id" },
         {
-          id: userId,
-          display_name: displayName.trim() || null,
-          username: displayName.trim(),
-          bio: bio.trim() || null,
-          featured_item_ids: featuredIds,
-        },
-        { onConflict: "id" }
+          method: "POST",
+          token,
+          prefer: "resolution=merge-duplicates,return=minimal",
+          body: {
+            id: userId,
+            display_name: displayName.trim() || null,
+            username: displayName.trim(),
+            bio: bio.trim() || null,
+            featured_item_ids: featuredIds,
+          },
+        }
       );
-
-    if (res.error) {
-      setStatus(res.error.message);
+    } catch (e: any) {
+      setStatus(e?.message ?? "Failed to save.");
       return;
     }
 

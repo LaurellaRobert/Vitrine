@@ -1,9 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getAccessToken, getUserId, restFetch } from "@/lib/supabaseRest";
 
 type Item = {
   id: string;
@@ -15,26 +14,27 @@ type Item = {
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [collected, setCollected] = useState<Set<string>>(new Set());
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      setIsLoggedIn(!!authData.user);
+      const userId = getUserId();
+      const token = getAccessToken();
 
-      const res = await supabase
-        .from("items")
-        .select("id,name,image_url,created_at")
-        .order("created_at", { ascending: false })
-        .limit(6);
+      const res = await restFetch<Item[]>("items", {
+        select: "id,name,image_url,created_at",
+        order: "created_at.desc",
+        limit: "6",
+      });
 
-      if (!res.error) setItems(res.data ?? []);
+      setItems(res ?? []);
 
-      if (authData.user) {
-        const collectedRes = await supabase.from("user_collected_items").select("item_id");
-        if (!collectedRes.error) {
-          setCollected(new Set<string>((collectedRes.data ?? []).map((row) => row.item_id)));
-        }
+      if (userId && token) {
+        const collectedRes = await restFetch<{ item_id: string }[]>(
+          "user_collected_items",
+          { select: "item_id" },
+          { token }
+        );
+        setCollected(new Set<string>((collectedRes ?? []).map((row) => row.item_id)));
       }
     })();
   }, []);
@@ -55,47 +55,24 @@ export default function Home() {
       }}
     >
       <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-12 px-6 py-16 lg:px-12">
-        <header className="flex flex-col gap-4">
-          <span
-            className="text-xs uppercase tracking-[0.3em] text-amber-700"
-            style={{ fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif" }}
-          >
-            Vitrine
-          </span>
+        <header className="flex flex-col items-center gap-6 text-center">
+          <Image
+            src="https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/visual/vitrine_brandmark.png"
+            alt="Vitrine"
+            width={260}
+            height={260}
+            priority
+            style={{ width: "min(260px, 60vw)", height: "auto" }}
+          />
           <h1
             className="max-w-2xl text-4xl font-semibold leading-tight text-slate-900"
             style={{ fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif" }}
           >
-            A quiet collection game of rare drops and permanent discoveries.
+            A cabinet of quiet discoveries.
           </h1>
-          <p className="max-w-2xl text-lg leading-7 text-slate-600">
-            Explore locations. Actions create events. Events unlock items.
+          <p className="max-w-xl text-base leading-7 text-slate-600">
+            Find rare drops. Keep what you collect.
           </p>
-
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center">
-            <Link
-              className="flex h-12 w-full items-center justify-center rounded-full bg-amber-700 px-6 text-base font-medium text-amber-50 transition-colors hover:bg-amber-800 sm:w-auto"
-              href="/collection"
-            >
-              View collection
-            </Link>
-
-            <Link
-              className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-amber-200/80 bg-white/90 px-6 text-base font-medium text-slate-700 transition-colors hover:border-amber-300 hover:bg-white sm:w-auto"
-              href="/library"
-            >
-              Explore
-            </Link>
-
-            {!isLoggedIn ? (
-              <Link
-                className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-slate-200/80 bg-white/80 px-6 text-base font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-white sm:w-auto"
-                href="/login"
-              >
-                Login
-              </Link>
-            ) : null}
-          </div>
         </header>
 
         <section className="flex justify-center">

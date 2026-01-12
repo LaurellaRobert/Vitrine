@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { restFetch } from "@/lib/supabaseRest";
 
 type Item = {
   id: string;
@@ -42,23 +42,20 @@ export default function PublicProfilePage() {
       try {
         setLoading(true);
         const displayName = displayNameParam;
-        const profileRes = await supabase
-          .from("profiles")
-          .select("id,display_name,bio,featured_item_ids,username")
-          .ilike("display_name", `%${displayName}%`)
-          .limit(1);
-
-        if (profileRes.error) throw profileRes.error;
-        let profileRow = (profileRes.data?.[0] ?? null) as (ProfileRow & { username?: string | null }) | null;
+        const profileRes = await restFetch<(ProfileRow & { username?: string | null })[]>("profiles", {
+          select: "id,display_name,bio,featured_item_ids,username",
+          display_name: `ilike.*${displayName}*`,
+          limit: "1",
+        });
+        let profileRow = (profileRes?.[0] ?? null) as (ProfileRow & { username?: string | null }) | null;
 
         if (!profileRow) {
-          const fallbackRes = await supabase
-            .from("profiles")
-            .select("id,display_name,bio,featured_item_ids,username")
-            .ilike("username", `%${displayName}%`)
-            .limit(1);
-          if (fallbackRes.error) throw fallbackRes.error;
-          profileRow = (fallbackRes.data?.[0] ?? null) as (ProfileRow & { username?: string | null }) | null;
+          const fallbackRes = await restFetch<(ProfileRow & { username?: string | null })[]>("profiles", {
+            select: "id,display_name,bio,featured_item_ids,username",
+            username: `ilike.*${displayName}*`,
+            limit: "1",
+          });
+          profileRow = (fallbackRes?.[0] ?? null) as (ProfileRow & { username?: string | null }) | null;
         }
 
         if (!profileRow) {
@@ -73,19 +70,18 @@ export default function PublicProfilePage() {
           return;
         }
 
-        const itemsRes = await supabase.from("items").select("id,name,image_url").in("id", featured);
-        if (itemsRes.error) throw itemsRes.error;
-
-        const byId = new Map((itemsRes.data ?? []).map((item) => [item.id, item]));
+        const itemsRes = await restFetch<Item[]>("items", {
+          select: "id,name,image_url",
+          id: `in.(${featured.join(",")})`,
+        });
+        const byId = new Map((itemsRes ?? []).map((item) => [item.id, item]));
         setItems(featured.map((id) => byId.get(id)).filter(Boolean) as Item[]);
 
-        const achievementsRes = await supabase
-          .from("user_achievements")
-          .select("achievements(id,name,description,icon_url)")
-          .eq("user_id", profileRow.id);
-        if (achievementsRes.error) throw achievementsRes.error;
-
-        const achievementRows = (achievementsRes.data ?? []).map((row) => row.achievements).filter(Boolean);
+        const achievementsRes = await restFetch<{ achievements: Achievement | null }[]>("user_achievements", {
+          select: "achievements(id,name,description,icon_url)",
+          user_id: `eq.${profileRow.id}`,
+        });
+        const achievementRows = (achievementsRes ?? []).map((row) => row.achievements).filter(Boolean);
         setAchievements(achievementRows as Achievement[]);
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");

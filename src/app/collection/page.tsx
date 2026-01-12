@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getAccessToken, getStoredSession, getUserId, restFetch } from "@/lib/supabaseRest";
 
 type Item = {
   id: string;
@@ -30,6 +30,12 @@ export default function CollectionPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const fetchInFlightRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedItem) return;
@@ -63,21 +69,38 @@ export default function CollectionPage() {
   }, [collectedCount, totalCount]);
 
   useEffect(() => {
-    (async () => {
+    const withTimeout = async <T,>(promise: Promise<T>, label: string, ms = 8000) => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timeout`)), ms);
+      });
+      try {
+        return await Promise.race([promise, timeout]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
+    const fetchData = async (reason: string) => {
+      if (fetchInFlightRef.current) {
+        return;
+      }
+      fetchInFlightRef.current = true;
       try {
         setLoading(true);
-        const { data: authData, error: authErr } = await supabase.auth.getUser();
-        if (authErr) throw authErr;
+        const storedSession = getStoredSession();
+        const accessToken = storedSession?.access_token ?? getAccessToken();
+        const userId = storedSession?.user?.id ?? getUserId();
 
-        const itemsRes = await supabase
-          .from("items")
-          .select("id,name,sort_order,rarity,image_url,description,collection_id")
-          .order("rarity", { ascending: true, nullsFirst: false })
-          .order("sort_order", { ascending: true, nullsFirst: false });
+        const itemsRes = await withTimeout(
+          restFetch<Item[]>("items", {
+            select: "id,name,sort_order,rarity,image_url,description,collection_id",
+            order: "rarity.asc.nullsfirst,sort_order.asc.nullsfirst",
+          }),
+          "items.select"
+        );
 
-        if (itemsRes.error) throw itemsRes.error;
-
-        const itemsData = (itemsRes.data ?? []) as Item[];
+        const itemsData = (itemsRes ?? []) as Item[];
         setAllItems(itemsData);
 
         const collectionIds = Array.from(
@@ -89,11 +112,14 @@ export default function CollectionPage() {
         );
 
         if (collectionIds.length > 0) {
-          const collectionsRes = await supabase
-            .from("collections")
-            .select("id,collection_display_name")
-            .in("id", collectionIds);
-          const fetched = (collectionsRes.data ?? []).map((row) => ({
+          const collectionsRes = await withTimeout(
+            restFetch<{ id: string; collection_display_name: string | null }[]>("collections", {
+              select: "id,collection_display_name",
+              id: `in.(${collectionIds.join(",")})`,
+            }),
+            "collections.select"
+          );
+          const fetched = (collectionsRes ?? []).map((row) => ({
             id: row.id as string,
             name: (row.collection_display_name as string) ?? row.id,
           }));
@@ -107,19 +133,42 @@ export default function CollectionPage() {
           }
         }
 
-        if (authData.user) {
-          const collectedRes = await supabase.from("user_collected_items").select("item_id");
-          if (collectedRes.error) throw collectedRes.error;
-          setCollected(new Set<string>((collectedRes.data ?? []).map((r: CollectedRow) => r.item_id)));
-        } else {
+        if (userId && accessToken) {
+          const collectedRes = await withTimeout(
+            restFetch<CollectedRow[]>("user_collected_items", { select: "item_id" }, { token: accessToken }),
+            "user_collected_items.select"
+          );
+          setCollected(new Set<string>((collectedRes ?? []).map((r: CollectedRow) => r.item_id)));
+        } else if (!accessToken) {
           setCollected(new Set());
         }
         setLoading(false);
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
         setLoading(false);
+      } finally {
+        fetchInFlightRef.current = false;
       }
-    })();
+    };
+
+    fetchData("mount");
+
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        fetchData("visible");
+      }
+    }
+
+    function handleFocus() {
+      fetchData("focus");
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
   const styles: Record<string, React.CSSProperties> = {

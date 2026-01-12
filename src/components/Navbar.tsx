@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -240,18 +241,34 @@ export default function Navbar() {
         <Link
           href="/"
           style={{
-            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
             marginRight: 10,
-            letterSpacing: 0.6,
             textDecoration: "none",
-            color: "rgba(255, 242, 224, 0.98)",
-            fontSize: 18,
-            fontFamily: brandFont,
             position: "relative",
             zIndex: 1,
           }}
         >
-          Vitrine
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "6px 10px",
+              borderRadius: 999,
+              border: "1px solid rgba(120, 78, 40, 0.45)",
+              background: "rgba(255, 248, 236, 1)",
+            }}
+          >
+            <Image
+              src="https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/visual/vitrine_brandmark.png"
+              alt="Vitrine"
+              width={96}
+              height={28}
+              style={{ width: "auto", height: 22, display: "block" }}
+            />
+          </span>
         </Link>
 
         {primaryItems.map((item) => {

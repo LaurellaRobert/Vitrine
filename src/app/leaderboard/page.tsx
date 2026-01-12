@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { restFetch } from "@/lib/supabaseRest";
 
 type LeaderboardRow = {
   user_id: string;
@@ -14,25 +14,69 @@ export default function LeaderboardPage() {
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const fetchInFlightRef = useRef(false);
 
   useEffect(() => {
-    (async () => {
+    return () => {
+    };
+  }, []);
+
+  useEffect(() => {
+    const withTimeout = async <T,>(promise: Promise<T>, label: string, ms = 8000) => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timeout`)), ms);
+      });
+      try {
+        return await Promise.race([promise, timeout]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
+    const fetchData = async (reason: string) => {
+      if (fetchInFlightRef.current) {
+        return;
+      }
+      fetchInFlightRef.current = true;
       try {
         setLoading(true);
-        const res = await supabase
-          .from("leaderboard_view")
-          .select("user_id,username,collected_count")
-          .order("collected_count", { ascending: false })
-          .limit(25);
+        const res = await withTimeout(
+          restFetch<LeaderboardRow[]>("leaderboard_view", {
+            select: "user_id,username,collected_count",
+            order: "collected_count.desc",
+            limit: "25",
+          }),
+          "leaderboard_view.select"
+        );
 
-        if (res.error) throw res.error;
-        setRows((res.data ?? []) as LeaderboardRow[]);
+        setRows((res ?? []) as LeaderboardRow[]);
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
       } finally {
         setLoading(false);
+        fetchInFlightRef.current = false;
       }
-    })();
+    };
+
+    fetchData("mount");
+
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        fetchData("visible");
+      }
+    }
+
+    function handleFocus() {
+      fetchData("focus");
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
   const styles: Record<string, CSSProperties> = {

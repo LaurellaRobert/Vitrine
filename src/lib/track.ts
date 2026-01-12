@@ -1,84 +1,97 @@
-import { supabase } from "@/lib/supabaseClient";
+import { getAccessToken, getUserId, restFetch } from "@/lib/supabaseRest";
 
 export async function trackPageVisit(eventKey: string) {
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  if (!user) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
+  const token = getAccessToken();
+  const userId = getUserId();
+  if (!token || !userId) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
 
-  const ins = await supabase.from("user_events").insert({
-    user_id: user.id,
-    event_type: "page_visit",
-    event_key: eventKey,
+  await restFetch("user_events", {}, {
+    method: "POST",
+    body: {
+      user_id: userId,
+      event_type: "page_visit",
+      event_key: eventKey,
+    },
+    token,
+    prefer: "return=minimal",
   });
 
-  if (ins.error) throw ins.error;
-
-  const rpc = await supabase.rpc("try_unlocks", {
-    p_event_type: "page_visit",
-    p_event_key: eventKey,
+  const rpc = await restFetch<any>("rpc/try_unlocks", {}, {
+    method: "POST",
+    body: {
+      p_event_type: "page_visit",
+      p_event_key: eventKey,
+    },
+    token,
   });
-
-  if (rpc.error) throw rpc.error;
 
   return {
-    unlockedCount: (rpc.data as any)?.unlocked_count ?? 0,
-    randomDrop: (rpc.data as any)?.random_drop ?? false,
-    sequenceDrop: (rpc.data as any)?.sequence_drop ?? false,
+    unlockedCount: (rpc as any)?.unlocked_count ?? (Array.isArray(rpc) ? (rpc[0] as any)?.unlocked_count ?? 0 : 0),
+    randomDrop: (rpc as any)?.random_drop ?? (Array.isArray(rpc) ? (rpc[0] as any)?.random_drop ?? false : false),
+    sequenceDrop: (rpc as any)?.sequence_drop ?? (Array.isArray(rpc) ? (rpc[0] as any)?.sequence_drop ?? false : false),
   };
 }
 
 export async function trackPageClick(eventKey: string) {
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  if (!user) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
+  const token = getAccessToken();
+  const userId = getUserId();
+  if (!token || !userId) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
 
-  const ins = await supabase.from("user_events").insert({
-    user_id: user.id,
-    event_type: "page_click",
-    event_key: eventKey,
+  await restFetch("user_events", {}, {
+    method: "POST",
+    body: {
+      user_id: userId,
+      event_type: "page_click",
+      event_key: eventKey,
+    },
+    token,
+    prefer: "return=minimal",
   });
 
-
-  
-  if (ins.error) throw ins.error;
-
-  const rpc = await supabase.rpc("try_unlocks", {
-    p_event_type: "page_click",
-    p_event_key: eventKey,
+  const rpc = await restFetch<any>("rpc/try_unlocks", {}, {
+    method: "POST",
+    body: {
+      p_event_type: "page_click",
+      p_event_key: eventKey,
+    },
+    token,
   });
-
-  if (rpc.error) throw rpc.error;
 
   return {
-    unlockedCount: (rpc.data as any)?.unlocked_count ?? 0,
-    randomDrop: (rpc.data as any)?.random_drop ?? false,
-    sequenceDrop: (rpc.data as any)?.sequence_drop ?? false,
+    unlockedCount: (rpc as any)?.unlocked_count ?? (Array.isArray(rpc) ? (rpc[0] as any)?.unlocked_count ?? 0 : 0),
+    randomDrop: (rpc as any)?.random_drop ?? (Array.isArray(rpc) ? (rpc[0] as any)?.random_drop ?? false : false),
+    sequenceDrop: (rpc as any)?.sequence_drop ?? (Array.isArray(rpc) ? (rpc[0] as any)?.sequence_drop ?? false : false),
   };
 }
 
 export async function trackTimeOnPage(eventKey: string) {
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  if (!user) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
+  const token = getAccessToken();
+  const userId = getUserId();
+  if (!token || !userId) return { unlockedCount: 0, randomDrop: false, sequenceDrop: false };
 
-  const ins = await supabase.from("user_events").insert({
-    user_id: user.id,
-    event_type: "page_time",
-    event_key: eventKey,
+  await restFetch("user_events", {}, {
+    method: "POST",
+    body: {
+      user_id: userId,
+      event_type: "page_time",
+      event_key: eventKey,
+    },
+    token,
+    prefer: "return=minimal",
   });
 
-  if (ins.error) throw ins.error;
-
-  const rpc = await supabase.rpc("try_unlocks", {
-    p_event_type: "page_time",
-    p_event_key: eventKey,
+  const rpc = await restFetch<any>("rpc/try_unlocks", {}, {
+    method: "POST",
+    body: {
+      p_event_type: "page_time",
+      p_event_key: eventKey,
+    },
+    token,
   });
-
-  if (rpc.error) throw rpc.error;
 
   return {
-    unlockedCount: (rpc.data as any)?.unlocked_count ?? 0,
-    randomDrop: (rpc.data as any)?.random_drop ?? false,
-    sequenceDrop: (rpc.data as any)?.sequence_drop ?? false,
+    unlockedCount: (rpc as any)?.unlocked_count ?? (Array.isArray(rpc) ? (rpc[0] as any)?.unlocked_count ?? 0 : 0),
+    randomDrop: (rpc as any)?.random_drop ?? (Array.isArray(rpc) ? (rpc[0] as any)?.random_drop ?? false : false),
+    sequenceDrop: (rpc as any)?.sequence_drop ?? (Array.isArray(rpc) ? (rpc[0] as any)?.sequence_drop ?? false : false),
   };
 }
