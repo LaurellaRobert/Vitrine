@@ -16,17 +16,9 @@ export default function LeaderboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    const cacheKey = "vitrine.leaderboard.cache";
-
-    const fetchRows = async (attempt: number, showLoading = true) => {
-      if (!mounted) return;
-      if (showLoading) {
-        setLoading(true);
-      }
-
+    (async () => {
       try {
+        setLoading(true);
         const res = await supabase
           .from("leaderboard_view")
           .select("user_id,username,collected_count")
@@ -34,77 +26,13 @@ export default function LeaderboardPage() {
           .limit(25);
 
         if (res.error) throw res.error;
-
-        const data = (res.data ?? []) as LeaderboardRow[];
-        if (data.length === 0 && attempt < 2) {
-          const delayMs = attempt === 0 ? 1200 : 2000;
-          retryTimer = setTimeout(() => {
-            fetchRows(attempt + 1).catch((err) => {
-              if (mounted) setError(err?.message ?? "Unknown error");
-            });
-          }, delayMs);
-          return;
-        }
-
-        setRows(data);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(data));
-        } catch {
-          // Ignore cache write failures (private mode, storage limits).
-        }
-        if (showLoading) {
-          setLoading(false);
-        }
+        setRows((res.data ?? []) as LeaderboardRow[]);
       } catch (e: any) {
-        if (mounted) {
-          setError(e?.message ?? "Unknown error");
-          if (showLoading) {
-            setLoading(false);
-          }
-        }
+        setError(e?.message ?? "Unknown error");
+      } finally {
+        setLoading(false);
       }
-    };
-
-    const start = async () => {
-      try {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached) as LeaderboardRow[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setRows(parsed);
-            setLoading(false);
-          }
-        }
-      } catch {
-        // Ignore cache read failures.
-      }
-
-      const hasRows = rows.length > 0;
-      fetchRows(0, !hasRows).catch((err) => setError(err?.message ?? "Unknown error"));
-    };
-
-    const handleFocus = () => {
-      const hasRows = rows.length > 0;
-      fetchRows(0, !hasRows).catch((err) => setError(err?.message ?? "Unknown error"));
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        const hasRows = rows.length > 0;
-        fetchRows(0, !hasRows).catch((err) => setError(err?.message ?? "Unknown error"));
-      }
-    };
-
-    start().catch((err) => setError(err?.message ?? "Unknown error"));
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      mounted = false;
-      if (retryTimer) clearTimeout(retryTimer);
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
+    })();
   }, []);
 
   const styles: Record<string, CSSProperties> = {

@@ -63,20 +63,11 @@ export default function CollectionPage() {
   }, [collectedCount, totalCount]);
 
   useEffect(() => {
-    let mounted = true;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    let authTimer: ReturnType<typeof setTimeout> | null = null;
-    let authSub: ReturnType<typeof supabase.auth.onAuthStateChange> | null = null;
-    const cacheKey = "vitrine.collection.cache";
-    const cacheUserKey = "vitrine.collection.cacheUser";
-
-    const fetchAll = async (attempt: number) => {
-      if (!mounted) return;
-      setLoading(true);
-
+    (async () => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const currentUserId = sessionData.session?.user?.id ?? null;
+        setLoading(true);
+        const { data: authData, error: authErr } = await supabase.auth.getUser();
+        if (authErr) throw authErr;
 
         const itemsRes = await supabase
           .from("items")
@@ -86,21 +77,9 @@ export default function CollectionPage() {
 
         if (itemsRes.error) throw itemsRes.error;
 
-        const collectedRes = await supabase.from("user_collected_items").select("item_id");
-        if (collectedRes.error) throw collectedRes.error;
-
         const itemsData = (itemsRes.data ?? []) as Item[];
-        if (itemsData.length === 0 && attempt < 2) {
-          const delayMs = attempt === 0 ? 1200 : 2000;
-          retryTimer = setTimeout(() => {
-            fetchAll(attempt + 1).catch((err) => {
-              if (mounted) setError(err?.message ?? "Unknown error");
-            });
-          }, delayMs);
-          return;
-        }
-
         setAllItems(itemsData);
+
         const collectionIds = Array.from(
           new Set(
             itemsData
@@ -108,8 +87,6 @@ export default function CollectionPage() {
               .filter((id): id is string => !!id)
           )
         );
-        let optionsToCache: { id: string; name: string }[] | undefined;
-        let selectedToCache: string | null = selectedCollectionId ?? null;
 
         if (collectionIds.length > 0) {
           const collectionsRes = await supabase
@@ -123,142 +100,26 @@ export default function CollectionPage() {
           const fallback = collectionIds.map((id) => ({ id, name: id }));
           const merged = fetched.length > 0 ? fetched : fallback;
           const options = [...merged, { id: "all", name: "All collections" }];
-          optionsToCache = options;
           setCollectionOptions(options);
           if (!selectedCollectionId) {
             const foodOption = options.find((option) => option.name === "Food");
-            const nextSelected = foodOption?.id ?? options[0]?.id ?? "all";
-            setSelectedCollectionId(nextSelected);
-            selectedToCache = nextSelected;
+            setSelectedCollectionId(foodOption?.id ?? options[0]?.id ?? "all");
           }
         }
-        setCollected(new Set<string>((collectedRes.data ?? []).map((r: CollectedRow) => r.item_id)));
-        try {
-          sessionStorage.setItem(
-            cacheKey,
-            JSON.stringify({
-              items: itemsData,
-              collected: (collectedRes.data ?? []).map((r: CollectedRow) => r.item_id),
-              options: optionsToCache,
-              selected: selectedToCache,
-            })
-          );
-          if (currentUserId) {
-            sessionStorage.setItem(cacheUserKey, currentUserId);
-          }
-        } catch {
-          // Ignore cache write failures (private mode, storage limits).
+
+        if (authData.user) {
+          const collectedRes = await supabase.from("user_collected_items").select("item_id");
+          if (collectedRes.error) throw collectedRes.error;
+          setCollected(new Set<string>((collectedRes.data ?? []).map((r: CollectedRow) => r.item_id)));
+        } else {
+          setCollected(new Set());
         }
         setLoading(false);
       } catch (e: any) {
-        if (mounted) {
-          setError(e?.message ?? "Unknown error");
-          setLoading(false);
-        }
+        setError(e?.message ?? "Unknown error");
+        setLoading(false);
       }
-    };
-
-    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    const waitForSession = async (refreshFirst: boolean) => {
-      if (refreshFirst) {
-        await supabase.auth.refreshSession();
-      }
-
-      for (let i = 0; i < 4; i += 1) {
-        if (!mounted) return false;
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.user) {
-          return true;
-        }
-        await delay(250);
-      }
-
-      return false;
-    };
-
-    const fetchIfAuthed = async (showAuthError: boolean, refreshFirst = false) => {
-      const hasSession = await waitForSession(refreshFirst);
-      if (hasSession) {
-        fetchAll(0).catch((err) => setError(err?.message ?? "Unknown error"));
-        return;
-      }
-
-      if (showAuthError) {
-        setLoading(true);
-        authTimer = setTimeout(() => {
-          if (mounted) {
-            setError("Not signed in. Go to /login");
-            setLoading(false);
-          }
-        }, 1500);
-      }
-    };
-
-    const start = async () => {
-      try {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const cachedUser = sessionStorage.getItem(cacheUserKey);
-          const { data: sessionData } = await supabase.auth.getSession();
-          const currentUserId = sessionData.session?.user?.id ?? null;
-          if (!cachedUser || !currentUserId || cachedUser === currentUserId) {
-            const parsed = JSON.parse(cached) as {
-              items?: Item[];
-              collected?: string[];
-              options?: { id: string; name: string }[];
-              selected?: string | null;
-            };
-            if (parsed.items && parsed.items.length > 0) {
-              setAllItems(parsed.items);
-              setCollected(new Set<string>(parsed.collected ?? []));
-              if (parsed.options && parsed.options.length > 0) {
-                setCollectionOptions(parsed.options);
-              }
-              if (parsed.selected) {
-                setSelectedCollectionId(parsed.selected);
-              }
-              setLoading(false);
-            }
-          }
-        }
-      } catch {
-        // Ignore cache read failures.
-      }
-
-      await fetchIfAuthed(true);
-
-      authSub = supabase.auth.onAuthStateChange((event, session) => {
-        if (!mounted) return;
-        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
-          if (authTimer) clearTimeout(authTimer);
-          fetchAll(0).catch((err) => setError(err?.message ?? "Unknown error"));
-        }
-      });
-    };
-
-    const handleFocus = () => {
-      fetchIfAuthed(false, true).catch((err) => setError(err?.message ?? "Unknown error"));
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchIfAuthed(false, true).catch((err) => setError(err?.message ?? "Unknown error"));
-      }
-    };
-
-    start().catch((err) => setError(err?.message ?? "Unknown error"));
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      mounted = false;
-      if (retryTimer) clearTimeout(retryTimer);
-      if (authTimer) clearTimeout(authTimer);
-      if (authSub) authSub.data.subscription.unsubscribe();
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
+    })();
   }, []);
 
   const styles: Record<string, React.CSSProperties> = {
@@ -496,7 +357,7 @@ export default function CollectionPage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(15, 23, 42, 0.58)",
-      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
+      fontFamily: "system-ui",
     },
 
     plaque: {
@@ -791,7 +652,7 @@ export default function CollectionPage() {
       letterSpacing: 0.8,
       fontSize: 11,
       color: "rgba(78, 54, 30, 0.8)",
-      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
+      fontFamily: "system-ui",
     },
     modalTagRow: {
       display: "flex",

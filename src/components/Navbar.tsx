@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { dismissNotification, getNotifications, subscribeNotifications, type NotificationItem } from "@/lib/notifications";
+import { subscribeCurrency } from "@/lib/currency";
 
 const primaryItems = [
   { href: "/collection", label: "Collection" },
@@ -19,6 +20,13 @@ const exploreItems = [
   { href: "/garden", label: "Garden" },
   { href: "/great_hall", label: "Great Hall" },
   { href: "/fountain", label: "Fountain" },
+  { href: "/well", label: "Well" },
+  { href: "/sanctum", label: "Sanctum" },
+  { href: "/battle", label: "Marionette Ring" },
+];
+
+const shopItems = [
+  { href: "/shops/inn", label: "Inn" },
 ];
 
 function isActivePath(pathname: string, href: string) {
@@ -30,17 +38,24 @@ function isAnyExploreActive(pathname: string) {
   return exploreItems.some((x) => isActivePath(pathname, x.href));
 }
 
+function isAnyShopActive(pathname: string) {
+  return shopItems.some((x) => isActivePath(pathname, x.href));
+}
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
   const [isAuthed, setIsAuthed] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
+  const [shopsOpen, setShopsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [displayName, setDisplayName] = useState<string>("");
+  const [currencyBalance, setCurrencyBalance] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const shopsRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -58,6 +73,14 @@ export default function Navbar() {
         if (!profileRes.error && profileRow?.display_name) {
           setDisplayName(profileRow.display_name);
         }
+        const currencyRes = await supabase
+          .from("user_currency")
+          .select("balance")
+          .eq("user_id", user.id)
+          .limit(1);
+        if (!currencyRes.error) {
+          setCurrencyBalance(currencyRes.data?.[0]?.balance ?? 0);
+        }
       }
     })();
 
@@ -74,8 +97,17 @@ export default function Navbar() {
         if (!profileRes.error && profileRow?.display_name) {
           setDisplayName(profileRow.display_name);
         }
+        const currencyRes = await supabase
+          .from("user_currency")
+          .select("balance")
+          .eq("user_id", user.id)
+          .limit(1);
+        if (!currencyRes.error) {
+          setCurrencyBalance(currencyRes.data?.[0]?.balance ?? 0);
+        }
       } else {
         setDisplayName("");
+        setCurrencyBalance(null);
       }
     });
 
@@ -87,12 +119,17 @@ export default function Navbar() {
 
   useEffect(() => {
     setExploreOpen(false);
+    setShopsOpen(false);
     setMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     setNotifications(getNotifications());
     return subscribeNotifications(setNotifications);
+  }, []);
+
+  useEffect(() => {
+    return subscribeCurrency((balance) => setCurrencyBalance(balance));
   }, []);
 
   useEffect(() => {
@@ -104,6 +141,10 @@ export default function Navbar() {
         setExploreOpen(false);
       }
 
+      if (shopsRef.current && !shopsRef.current.contains(target)) {
+        setShopsOpen(false);
+      }
+
       if (menuRef.current && !menuRef.current.contains(target)) {
         setMenuOpen(false);
       }
@@ -112,6 +153,7 @@ export default function Navbar() {
     function onDocKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setExploreOpen(false);
+        setShopsOpen(false);
         setMenuOpen(false);
       }
     }
@@ -292,7 +334,83 @@ export default function Navbar() {
           ) : null}
         </div>
 
-        <div style={{ marginLeft: "auto" }}>
+        <div ref={shopsRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setShopsOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={shopsOpen}
+            style={{
+              ...itemBase,
+              ...(isAnyShopActive(pathname) ? itemActive : null),
+              cursor: "pointer",
+              fontWeight: isAnyShopActive(pathname) ? 600 : 400,
+            }}
+          >
+            Shops ▾
+          </button>
+
+          {shopsOpen ? (
+            <div
+              role="menu"
+              aria-label="Shops"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                left: 0,
+                minWidth: 200,
+                background:
+                  "linear-gradient(180deg, rgba(129, 78, 41, 0.98), rgba(92, 54, 28, 0.98))",
+                border: "1px solid rgba(52, 30, 14, 0.6)",
+                borderRadius: 14,
+                boxShadow: "0 16px 40px rgba(52, 30, 14, 0.4)",
+                padding: 12,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                zIndex: 2,
+              }}
+            >
+              {shopItems.map((item) => {
+                const active = isActivePath(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    role="menuitem"
+                    style={{
+                      display: "block",
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      textDecoration: "none",
+                      color: "rgba(72, 42, 18, 0.92)",
+                      background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
+                      border: "1px solid rgba(120, 78, 40, 0.35)",
+                      fontWeight: active ? 600 : 500,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, letterSpacing: 0.3 }}>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          {currencyBalance !== null ? (
+            <div
+              style={{
+                ...itemBase,
+                cursor: "default",
+                border: "1px solid rgba(156, 108, 62, 0.55)",
+                background: "rgba(255, 242, 224, 1)",
+                fontWeight: 600,
+              }}
+            >
+              Petals: {currencyBalance}
+            </div>
+          ) : null}
           {!isAuthed ? (
             <Link
               href="/login"

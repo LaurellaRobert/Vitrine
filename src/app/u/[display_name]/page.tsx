@@ -172,7 +172,7 @@ export default function PublicProfilePage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(15, 23, 42, 0.6)",
-      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
+      fontFamily: "system-ui",
     },
     plaque: {
       display: "inline-flex",
@@ -279,7 +279,7 @@ export default function PublicProfilePage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(92, 60, 20, 0.8)",
-      fontFamily: "\"Iowan Old Style\", \"Georgia\", \"Times New Roman\", serif",
+      fontFamily: "system-ui",
     },
     trophyGrid: {
       display: "grid",
