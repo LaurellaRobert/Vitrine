@@ -253,7 +253,7 @@ export default function FountainPage() {
   };
 
   return (
-    <main style={styles.page}>
+    <main style={styles.page} className="fountain-page">
       <div style={styles.shell}>
         <section style={styles.layout} className="fountain-layout">
           <div style={styles.leftCol}>

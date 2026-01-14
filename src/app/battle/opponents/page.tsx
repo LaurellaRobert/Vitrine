@@ -31,7 +31,7 @@ export default function OpponentGalleryPage() {
       try {
         const res = await restFetch<Opponent[]>("opponents", {
           select: "id,name,hp,strength,defense,speed,image_url",
-          order: "name.asc",
+          order: "hp.desc",
         });
         setOpponents((res ?? []) as Opponent[]);
       } catch (e: any) {

@@ -17,6 +17,26 @@ type Familiar = {
 export default function FamiliarPage() {
   const [familiar, setFamiliar] = useState<Familiar | null>(null);
   const [status, setStatus] = useState("");
+  const [trainingStatus, setTrainingStatus] = useState("");
+  const [trainingClaimed, setTrainingClaimed] = useState(false);
+  const [trainingStat, setTrainingStat] = useState<string | null>(null);
+  const [trainingGain, setTrainingGain] = useState<number | null>(null);
+  const [trainingLoading, setTrainingLoading] = useState(false);
+
+  const trainingOptions = [
+    { key: "hp_max", label: "HP" },
+    { key: "strength", label: "Strength" },
+    { key: "defense", label: "Defense" },
+    { key: "speed", label: "Speed" },
+  ];
+
+  const getEstDateString = () =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
 
   useEffect(() => {
     (async () => {
@@ -38,11 +58,79 @@ export default function FamiliarPage() {
           { token }
         );
         setFamiliar((res ?? [])[0] ?? null);
+
+        const estDate = getEstDateString();
+        const trainingRes = await restFetch<{ event_key: string }[]>(
+          "user_events",
+          {
+            select: "event_key",
+            event_type: "eq.familiar_training",
+            event_day_est: `eq.${estDate}`,
+            user_id: `eq.${userId}`,
+            limit: "1",
+          },
+          { token }
+        );
+        const existingTraining = (trainingRes ?? [])[0]?.event_key ?? null;
+        setTrainingClaimed(!!existingTraining);
+        setTrainingStat(existingTraining);
       } catch (e: any) {
         setStatus(e?.message ?? "Failed to load familiar.");
       }
     })();
   }, []);
+
+  const handleTraining = async (statKey: string) => {
+    try {
+      setTrainingLoading(true);
+      setTrainingStatus("");
+      setTrainingGain(null);
+      const token = getAccessToken();
+      if (!token) {
+        setTrainingStatus("Sign in to train your familiar.");
+        return;
+      }
+      const rpc = await restFetch<any>(
+        "rpc/claim_familiar_training",
+        {},
+        { method: "POST", body: { p_stat: statKey }, token }
+      );
+      const row = Array.isArray(rpc) ? rpc[0] : rpc;
+      if (!row?.granted) {
+        setTrainingClaimed(true);
+        setTrainingStat(row?.stat ?? statKey);
+        setTrainingStatus("Your familiar has already trained today.");
+        return;
+      }
+      const gain = Number(row?.gain ?? 0);
+      const newValue = Number(row?.new_value ?? 0);
+      setTrainingClaimed(true);
+      setTrainingStat(statKey);
+      setTrainingGain(gain);
+      setTrainingStatus(`Training complete. +${gain} ${statKey === "hp_max" ? "HP" : statKey}.`);
+
+      setFamiliar((prev) => {
+        if (!prev) return prev;
+        if (statKey === "hp_max") {
+          return { ...prev, hp_max: newValue, hp_current: prev.hp_current + gain };
+        }
+        if (statKey === "strength") {
+          return { ...prev, strength: newValue };
+        }
+        if (statKey === "defense") {
+          return { ...prev, defense: newValue };
+        }
+        if (statKey === "speed") {
+          return { ...prev, speed: newValue };
+        }
+        return prev;
+      });
+    } catch (e: any) {
+      setTrainingStatus(e?.message ?? "Training failed.");
+    } finally {
+      setTrainingLoading(false);
+    }
+  };
 
   return (
     <main
@@ -145,6 +233,49 @@ export default function FamiliarPage() {
                 <div>Strength: {familiar.strength}</div>
                 <div>Defense: {familiar.defense}</div>
                 <div>Speed: {familiar.speed}</div>
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                      color: "rgba(120, 140, 180, 0.8)",
+                    }}
+                  >
+                    Daily lesson
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+                    {trainingOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => handleTraining(option.key)}
+                        disabled={trainingLoading || trainingClaimed}
+                        style={{
+                          borderRadius: 12,
+                          border: "1px solid rgba(120, 140, 180, 0.35)",
+                          background: trainingClaimed ? "rgba(235, 240, 247, 0.8)" : "rgba(248, 251, 255, 0.95)",
+                          padding: "8px 10px",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "rgba(34, 52, 80, 0.88)",
+                          cursor: trainingClaimed ? "not-allowed" : "pointer",
+                          opacity: trainingLoading ? 0.7 : 1,
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {trainingStatus ? (
+                    <div style={{ fontSize: 13, color: "rgba(34, 52, 80, 0.74)" }}>{trainingStatus}</div>
+                  ) : trainingClaimed && trainingStat ? (
+                    <div style={{ fontSize: 13, color: "rgba(34, 52, 80, 0.62)" }}>
+                      Trained today ({trainingStat === "hp_max" ? "HP" : trainingStat}
+                      {typeof trainingGain === "number" ? ` +${trainingGain}` : ""}).
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           ) : null}

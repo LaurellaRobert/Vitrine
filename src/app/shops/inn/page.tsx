@@ -24,6 +24,8 @@ export default function InnVendorPage() {
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
+  const rareItemId = "67c1d00c-ad72-49a9-a338-03aa631dd9e3";
+  const rarePrice = 100;
 
   useEffect(() => {
     (async () => {
@@ -33,14 +35,37 @@ export default function InnVendorPage() {
           select: "id,price,item:items(id,name,image_url,description)",
           vendor_key: "eq.inn",
           is_active: "eq.true",
+          item_id: `neq.${rareItemId}`,
           order: "price.asc",
         });
-        setItems((itemsRes ?? []) as VendorItem[]);
+        let nextItems = (itemsRes ?? []) as VendorItem[];
+
+        if (Math.random() < 0.01) {
+          const rareVendorRows = await restFetch<VendorItem[]>("vendor_items", {
+            select: "id,price,item:items(id,name,image_url,description)",
+            vendor_key: "eq.inn",
+            item_id: `eq.${rareItemId}`,
+            is_active: "eq.true",
+            limit: "1",
+          });
+          const rareVendorItem = (rareVendorRows ?? [])[0];
+          if (rareVendorItem?.item && !nextItems.some((entry) => entry.item?.id === rareItemId)) {
+            nextItems = [
+              ...nextItems,
+              {
+                ...rareVendorItem,
+                price: rareVendorItem.price ?? rarePrice,
+              },
+            ];
+          }
+        }
+
+        setItems(nextItems);
 
         const userId = getUserId();
         const token = getAccessToken();
         if (userId && token) {
-          const itemIds = (itemsRes ?? [])
+          const itemIds = nextItems
             .map((entry) => entry.item?.id)
             .filter((id): id is string => Boolean(id));
           if (itemIds.length > 0) {
