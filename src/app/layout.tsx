@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import SideNav from "@/components/SideNav";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
+
+const geistSans = manrope;
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -27,17 +29,31 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={'${geistSans.variable} ${geistMono.variable} antialiased'}>
-        <Navbar />
         <div
           style={{
             display: "flex",
             alignItems: "stretch",
-            minHeight: "calc(100vh - 64px)",
-            background: "#fffdf9",
+            minHeight: "100vh",
+            background: "#ffffff",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <SideNav />
-          <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              background: "#ffffff",
+            }}
+          >
+            <Navbar />
+            <div style={{ flex: 1, minWidth: 0, padding: "18px 24px 32px", position: "relative" }}>
+              {children}
+            </div>
+          </div>
         </div>
       </body>
     </html>

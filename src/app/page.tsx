@@ -45,15 +45,7 @@ export default function Home() {
   }, [items]);
 
   return (
-    <div
-      className="min-h-screen bg-[#f6f1e7] font-sans text-slate-900"
-      style={{
-        background:
-          "radial-gradient(1200px 700px at 10% 0%, rgba(245, 232, 210, 0.85), transparent 60%)," +
-          "radial-gradient(900px 620px at 92% 12%, rgba(255, 239, 216, 0.75), transparent 62%)," +
-          "linear-gradient(180deg, rgba(252, 249, 244, 1), rgba(244, 238, 228, 1))",
-      }}
-    >
+    <div className="min-h-screen bg-white text-slate-900">
       <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-12 px-6 py-16 lg:px-12">
         <header className="flex flex-col items-center gap-6 text-center">
           <Image
@@ -94,7 +86,6 @@ export default function Home() {
                 className="pointer-events-none absolute inset-0 opacity-40"
                 style={{
                   background:
-                    "repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 2px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 8px)," +
                     "repeating-linear-gradient(12deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, rgba(255,255,255,0.06) 2px, rgba(255,255,255,0.06) 8px)",
                 }}
               />

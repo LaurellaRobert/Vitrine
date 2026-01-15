@@ -108,7 +108,6 @@ export default function FountainPage() {
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
-      fontFamily: "system-ui",
       color: "rgba(230, 233, 239, 0.92)",
       background:
         "radial-gradient(900px 600px at 12% 0%, rgba(42, 74, 58, 0.6), transparent 60%)," +

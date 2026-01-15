@@ -46,7 +46,6 @@ export default function CastlePage() {
     <main
       onClick={onClickAnywhere}
       style={{
-        fontFamily: "system-ui",
         color: "rgba(15, 23, 42, 0.92)",
         background:
           "radial-gradient(1200px 720px at 20% 0%, rgba(214, 200, 255, 0.55), transparent 58%)," +

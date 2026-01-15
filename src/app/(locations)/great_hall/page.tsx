@@ -46,7 +46,6 @@ export default function GreatHallPage() {
     <main
       onClick={onClickAnywhere}
       style={{
-        fontFamily: "system-ui",
         color: "rgba(15, 23, 42, 0.92)",
         background:
           "radial-gradient(1200px 700px at 15% 0%, rgba(255, 210, 179, 0.65), transparent 55%)," +

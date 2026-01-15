@@ -14,6 +14,18 @@ type Item = {
   collection_id: string | null;
 };
 
+type IconMap = Record<string, number>;
+
+type WeaponRow = {
+  item_id: string | null;
+  attack_icons: IconMap | null;
+};
+
+type ShieldRow = {
+  item_id: string | null;
+  block_icons: IconMap | null;
+};
+
 type CollectedRow = {
   item_id: string;
 };
@@ -30,6 +42,8 @@ export default function CollectionPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [weaponIconsByItemId, setWeaponIconsByItemId] = useState<Record<string, IconMap>>({});
+  const [shieldIconsByItemId, setShieldIconsByItemId] = useState<Record<string, IconMap>>({});
   const fetchInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -92,16 +106,34 @@ export default function CollectionPage() {
         const accessToken = storedSession?.access_token ?? getAccessToken();
         const userId = storedSession?.user?.id ?? getUserId();
 
-        const itemsRes = await withTimeout(
-          restFetch<Item[]>("items", {
-            select: "id,name,sort_order,rarity,image_url,description,collection_id",
-            order: "rarity.asc.nullsfirst,sort_order.asc.nullsfirst",
-          }),
+        const [itemsRes, weaponsRes, shieldsRes] = await withTimeout(
+          Promise.all([
+            restFetch<Item[]>("items", {
+              select: "id,name,sort_order,rarity,image_url,description,collection_id",
+              order: "rarity.asc.nullsfirst,sort_order.asc.nullsfirst",
+            }),
+            restFetch<WeaponRow[]>("weapons", { select: "item_id,attack_icons" }),
+            restFetch<ShieldRow[]>("shields", { select: "item_id,block_icons" }),
+          ]),
           "items.select"
         );
 
         const itemsData = (itemsRes ?? []) as Item[];
         setAllItems(itemsData);
+        const nextWeaponIcons: Record<string, IconMap> = {};
+        (weaponsRes ?? []).forEach((row) => {
+          if (row.item_id && row.attack_icons) {
+            nextWeaponIcons[row.item_id] = row.attack_icons;
+          }
+        });
+        const nextShieldIcons: Record<string, IconMap> = {};
+        (shieldsRes ?? []).forEach((row) => {
+          if (row.item_id && row.block_icons) {
+            nextShieldIcons[row.item_id] = row.block_icons;
+          }
+        });
+        setWeaponIconsByItemId(nextWeaponIcons);
+        setShieldIconsByItemId(nextShieldIcons);
 
         const collectionIds = Array.from(
           new Set(
@@ -173,7 +205,6 @@ export default function CollectionPage() {
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
-      fontFamily: "system-ui",
       color: "rgba(15, 23, 42, 0.92)",
       background:
         "radial-gradient(1200px 720px at 12% 0%, rgba(231, 224, 204, 0.55), transparent 60%)," +
@@ -406,7 +437,6 @@ export default function CollectionPage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(15, 23, 42, 0.58)",
-      fontFamily: "system-ui",
     },
 
     plaque: {
@@ -537,7 +567,6 @@ export default function CollectionPage() {
 
     label: {
       fontSize: 14,
-      fontFamily: "system-ui",
       fontWeight: 600,
       textAlign: "center",
       lineHeight: 1.2,
@@ -701,9 +730,30 @@ export default function CollectionPage() {
       letterSpacing: 0.8,
       fontSize: 11,
       color: "rgba(78, 54, 30, 0.8)",
-      fontFamily: "system-ui",
     },
     modalTagRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+      justifyContent: "center",
+    },
+    modalIconCard: {
+      borderRadius: 16,
+      border: "1px solid rgba(120, 90, 60, 0.28)",
+      background: "rgba(255, 250, 242, 0.95)",
+      padding: "12px 14px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 10,
+      alignItems: "center",
+    },
+    modalIconLabel: {
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      color: "rgba(78, 54, 30, 0.75)",
+    },
+    modalIconRow: {
       display: "flex",
       flexWrap: "wrap",
       gap: 8,
@@ -724,6 +774,52 @@ export default function CollectionPage() {
 
     footer: { marginTop: 18, paddingLeft: 2 },
     link: { color: "inherit" },
+  };
+
+  const iconUrls: Record<string, string> = {
+    dark: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/dark.png",
+    earth: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/earth.png",
+    fire: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/fire.png",
+    light: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/light.png",
+    lightning:
+      "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/lightning.png",
+    physical:
+      "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/physical.png",
+    water: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/water.png",
+    wind: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/wind.png",
+  };
+
+  const renderIconSprites = (icons?: IconMap, variant: "attack" | "block" = "attack") => {
+    if (!icons) return null;
+    const entries = Object.entries(icons);
+    if (entries.length === 0) return null;
+    const spriteList: string[] = [];
+    entries.forEach(([key, value]) => {
+      const count = Number(value) || 0;
+      for (let i = 0; i < count; i += 1) {
+        spriteList.push(key);
+      }
+    });
+    return spriteList.map((key, index) => {
+      const src = iconUrls[key];
+      if (!src) return null;
+      return (
+        <img
+          key={`${key}-${index}`}
+          alt={`${key} icon`}
+          src={src}
+          width={28}
+          height={28}
+          style={{
+            width: 28,
+            height: 28,
+            display: "block",
+            filter: variant === "block" ? "grayscale(100%)" : "none",
+            opacity: variant === "block" ? 0.75 : 1,
+          }}
+        />
+      );
+    });
   };
 
   return (
@@ -763,14 +859,14 @@ export default function CollectionPage() {
               onClick={() => setRaritySort("asc")}
               style={{ ...styles.pill, ...(raritySort === "asc" ? styles.pillActive : null) }}
             >
-              Ascending
+              ↑
             </button>
             <button
               type="button"
               onClick={() => setRaritySort("desc")}
               style={{ ...styles.pill, ...(raritySort === "desc" ? styles.pillActive : null) }}
             >
-              Descending
+              ↓
             </button>
           </div>
 
@@ -928,6 +1024,31 @@ export default function CollectionPage() {
               </div>
               <div style={styles.modalTag}>Rarity: {selectedItem.rarity ?? 0}</div>
             </div>
+            {(() => {
+              const collectionName =
+                collectionOptions.find((option) => option.id === selectedItem.collection_id)?.name ?? "";
+              const isBattleItem = collectionName.toLowerCase() === "battle";
+              if (!isBattleItem) return null;
+              const weaponIcons = weaponIconsByItemId[selectedItem.id];
+              const shieldIcons = shieldIconsByItemId[selectedItem.id];
+              if (!weaponIcons && !shieldIcons) return null;
+              return (
+                <div style={styles.modalIconCard}>
+                  {weaponIcons ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+                      <div style={styles.modalIconLabel}>Attack icons</div>
+                      <div style={styles.modalIconRow}>{renderIconSprites(weaponIcons, "attack")}</div>
+                    </div>
+                  ) : null}
+                  {shieldIcons ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+                      <div style={styles.modalIconLabel}>Block icons</div>
+                      <div style={styles.modalIconRow}>{renderIconSprites(shieldIcons, "block")}</div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })()}
             <div style={styles.modalDescPill}>
               <p style={styles.modalDesc}>
                 {selectedItem.description ? selectedItem.description : "No flavor text yet."}

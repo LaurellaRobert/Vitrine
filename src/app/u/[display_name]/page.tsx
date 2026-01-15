@@ -93,7 +93,6 @@ export default function PublicProfilePage() {
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
-      fontFamily: "system-ui",
       color: "rgba(15, 23, 42, 0.92)",
       background:
         "radial-gradient(1200px 720px at 12% 0%, rgba(231, 224, 204, 0.55), transparent 60%)," +
@@ -168,7 +167,6 @@ export default function PublicProfilePage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(15, 23, 42, 0.6)",
-      fontFamily: "system-ui",
     },
     plaque: {
       display: "inline-flex",
@@ -275,7 +273,6 @@ export default function PublicProfilePage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(92, 60, 20, 0.8)",
-      fontFamily: "system-ui",
     },
     trophyGrid: {
       display: "grid",

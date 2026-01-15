@@ -70,7 +70,6 @@ export default function MuseumPage() {
         maxWidth: 1280,
         margin: "0 auto",
         padding: "46px 20px 72px",
-        fontFamily: "system-ui",
         color: "rgba(30, 41, 59, 0.92)",
       }}
     >

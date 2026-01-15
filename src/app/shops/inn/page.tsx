@@ -144,7 +144,6 @@ export default function InnVendorPage() {
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
-      fontFamily: "system-ui",
       color: "rgba(15, 23, 42, 0.92)",
       background:
         "radial-gradient(1200px 720px at 12% 0%, rgba(231, 224, 204, 0.55), transparent 60%)," +
@@ -237,7 +236,6 @@ export default function InnVendorPage() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
       color: "rgba(15, 23, 42, 0.6)",
-      fontFamily: "system-ui",
     },
     plaque: {
       display: "inline-flex",

@@ -100,7 +100,6 @@ export default function OpponentHighscoresPage() {
           "radial-gradient(900px 600px at 88% 18%, rgba(255, 234, 208, 0.45), transparent 62%)," +
           "linear-gradient(180deg, rgba(252, 249, 244, 1), rgba(246, 243, 235, 1))",
         color: "rgba(15, 23, 42, 0.92)",
-        fontFamily: "system-ui",
       }}
     >
       <div

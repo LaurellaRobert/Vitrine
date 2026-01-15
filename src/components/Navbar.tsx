@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -98,22 +97,22 @@ export default function Navbar() {
 
   const exploreActive = isAnyExploreActive(pathname);
   const battleActive = battleItems.some((item) => isActivePath(pathname, item.href));
-  const navFont = "system-ui";
   const itemBase = {
     textDecoration: "none",
-    color: "rgba(72, 42, 18, 0.92)",
-    padding: "7px 12px",
+    color: "rgba(59, 47, 37, 0.92)",
+    padding: "5px 10px",
     borderRadius: 999,
-    border: "1px solid rgba(120, 78, 40, 0.4)",
-    background: "rgba(255, 250, 242, 1)",
+    border: "1px solid rgba(173, 146, 120, 0.5)",
+    background: "rgba(244, 236, 226, 1)",
     letterSpacing: 0.2,
+    fontSize: 13,
     textShadow: "none",
     position: "relative",
     zIndex: 1,
   } as const;
   const itemActive = {
-    border: "1px solid rgba(156, 108, 62, 0.7)",
-    background: "rgba(255, 235, 206, 1)",
+    border: "1px solid rgba(152, 120, 96, 0.75)",
+    background: "rgba(233, 217, 198, 1)",
     fontWeight: 600,
   } as const;
 
@@ -123,47 +122,25 @@ export default function Navbar() {
         position: "sticky",
         top: 0,
         zIndex: 10,
-        background: "rgba(62, 38, 24, 0.98)",
-        borderBottom: "1px solid rgba(35, 22, 13, 0.8)",
+        background: "rgba(231, 220, 206, 1)",
+        borderBottom: "1px solid rgba(173, 146, 120, 0.6)",
         boxShadow: "none",
+        height: 52,
       }}
     >
       <nav
         style={{
           maxWidth: "100%",
           margin: "0 auto",
-          padding: "12px 28px",
+          padding: "0 10px",
           display: "flex",
           alignItems: "center",
-          gap: 14,
-          fontFamily: navFont,
+          gap: 8,
           position: "relative",
-          color: "rgba(255, 245, 231, 0.9)",
+          color: "rgba(59, 47, 37, 0.9)",
+          height: 52,
         }}
       >
-        <Link
-          href="/"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginRight: 10,
-            textDecoration: "none",
-            position: "relative",
-            zIndex: 1,
-            width: 260,
-            flex: "0 0 260px",
-          }}
-        >
-          <Image
-            src="https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/visual/vitrine_brandmark.png"
-            alt="Vitrine"
-            width={190}
-            height={100}
-            style={{ width: "auto", height: "auto", display: "block" }}
-          />
-        </Link>
-
         {primaryItems.map((item) => {
           const active = isActivePath(pathname, item.href);
           return (
@@ -205,14 +182,14 @@ export default function Navbar() {
                 top: "calc(100% + 8px)",
                 left: 0,
                 minWidth: 200,
-                background: "rgba(255, 250, 242, 1)",
-                border: "1px solid rgba(120, 78, 40, 0.4)",
+                background: "rgba(244, 236, 226, 1)",
+                border: "1px solid rgba(173, 146, 120, 0.5)",
                 borderRadius: 14,
-                boxShadow: "0 10px 26px rgba(22, 14, 8, 0.35)",
-                padding: 12,
+                boxShadow: "0 10px 26px rgba(60, 45, 32, 0.18)",
+                padding: 10,
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
+                gap: 6,
                 zIndex: 2,
               }}
             >
@@ -225,12 +202,12 @@ export default function Navbar() {
                     role="menuitem"
                     style={{
                       display: "block",
-                      padding: "10px 12px",
+                      padding: "8px 10px",
                       borderRadius: 12,
                       textDecoration: "none",
-                      color: "rgba(72, 42, 18, 0.92)",
-                      background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
-                      border: "1px solid rgba(120, 78, 40, 0.35)",
+                      color: "rgba(59, 47, 37, 0.92)",
+                      background: active ? "rgba(233, 217, 198, 1)" : "rgba(244, 236, 226, 1)",
+                      border: "1px solid rgba(173, 146, 120, 0.45)",
                       fontWeight: active ? 600 : 500,
                     }}
                   >
@@ -267,14 +244,14 @@ export default function Navbar() {
                 top: "calc(100% + 8px)",
                 left: 0,
                 minWidth: 360,
-                background: "rgba(255, 250, 242, 1)",
-                border: "1px solid rgba(120, 78, 40, 0.4)",
+                background: "rgba(244, 236, 226, 1)",
+                border: "1px solid rgba(173, 146, 120, 0.5)",
                 borderRadius: 14,
-                boxShadow: "0 10px 26px rgba(22, 14, 8, 0.35)",
-                padding: 16,
+                boxShadow: "0 10px 26px rgba(60, 45, 32, 0.18)",
+                padding: 12,
                 display: "grid",
                 gridTemplateColumns: "repeat(2, minmax(160px, 1fr))",
-                gap: 12,
+                gap: 10,
                 zIndex: 2,
               }}
             >
@@ -284,7 +261,7 @@ export default function Navbar() {
                     fontSize: 11,
                     textTransform: "uppercase",
                     letterSpacing: 0.6,
-                    color: "rgba(120, 90, 60, 0.7)",
+                    color: "rgba(97, 78, 63, 0.7)",
                   }}
                 >
                   Locations
@@ -297,17 +274,17 @@ export default function Navbar() {
                       href={item.href}
                       role="menuitem"
                       style={{
-                        display: "block",
-                        padding: "12px 14px",
-                        borderRadius: 14,
-                        textDecoration: "none",
-                        color: "rgba(72, 42, 18, 0.92)",
-                        background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
-                        border: "1px solid rgba(120, 78, 40, 0.35)",
-                        fontWeight: active ? 600 : 500,
-                        textAlign: "center",
-                      }}
-                    >
+                      display: "block",
+                      padding: "10px 12px",
+                      borderRadius: 14,
+                      textDecoration: "none",
+                      color: "rgba(59, 47, 37, 0.92)",
+                      background: active ? "rgba(233, 217, 198, 1)" : "rgba(244, 236, 226, 1)",
+                      border: "1px solid rgba(173, 146, 120, 0.45)",
+                      fontWeight: active ? 600 : 500,
+                      textAlign: "center",
+                    }}
+                  >
                       <span style={{ fontSize: 14, letterSpacing: 0.4 }}>{item.label}</span>
                     </Link>
                   );
@@ -319,7 +296,7 @@ export default function Navbar() {
                     fontSize: 11,
                     textTransform: "uppercase",
                     letterSpacing: 0.6,
-                    color: "rgba(120, 90, 60, 0.7)",
+                    color: "rgba(97, 78, 63, 0.7)",
                   }}
                 >
                   Activities
@@ -332,17 +309,17 @@ export default function Navbar() {
                       href={item.href}
                       role="menuitem"
                       style={{
-                        display: "block",
-                        padding: "12px 14px",
-                        borderRadius: 14,
-                        textDecoration: "none",
-                        color: "rgba(72, 42, 18, 0.92)",
-                        background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
-                        border: "1px solid rgba(120, 78, 40, 0.35)",
-                        fontWeight: active ? 600 : 500,
-                        textAlign: "center",
-                      }}
-                    >
+                      display: "block",
+                      padding: "10px 12px",
+                      borderRadius: 14,
+                      textDecoration: "none",
+                      color: "rgba(59, 47, 37, 0.92)",
+                      background: active ? "rgba(233, 217, 198, 1)" : "rgba(244, 236, 226, 1)",
+                      border: "1px solid rgba(173, 146, 120, 0.45)",
+                      fontWeight: active ? 600 : 500,
+                      textAlign: "center",
+                    }}
+                  >
                       <span style={{ fontSize: 14, letterSpacing: 0.4 }}>{item.label}</span>
                     </Link>
                   );
@@ -377,14 +354,14 @@ export default function Navbar() {
                 top: "calc(100% + 8px)",
                 left: 0,
                 minWidth: 200,
-                background: "rgba(255, 250, 242, 1)",
-                border: "1px solid rgba(120, 78, 40, 0.4)",
+                background: "rgba(244, 236, 226, 1)",
+                border: "1px solid rgba(173, 146, 120, 0.5)",
                 borderRadius: 14,
-                boxShadow: "0 10px 26px rgba(22, 14, 8, 0.35)",
-                padding: 12,
+                boxShadow: "0 10px 26px rgba(60, 45, 32, 0.18)",
+                padding: 10,
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
+                gap: 6,
                 zIndex: 2,
               }}
             >
@@ -397,12 +374,12 @@ export default function Navbar() {
                     role="menuitem"
                     style={{
                       display: "block",
-                      padding: "10px 12px",
+                      padding: "8px 10px",
                       borderRadius: 12,
                       textDecoration: "none",
-                      color: "rgba(72, 42, 18, 0.92)",
-                      background: active ? "rgba(255, 236, 210, 1)" : "rgba(255, 248, 236, 1)",
-                      border: "1px solid rgba(120, 78, 40, 0.35)",
+                      color: "rgba(59, 47, 37, 0.92)",
+                      background: active ? "rgba(233, 217, 198, 1)" : "rgba(244, 236, 226, 1)",
+                      border: "1px solid rgba(173, 146, 120, 0.45)",
                       fontWeight: active ? 600 : 500,
                     }}
                   >

@@ -135,7 +135,6 @@ export default function FamiliarPage() {
   return (
     <main
       style={{
-        fontFamily: "system-ui",
         color: "rgba(34, 52, 80, 0.92)",
         background:
           "radial-gradient(1200px 720px at 12% 0%, rgba(214, 225, 242, 0.55), transparent 60%)," +

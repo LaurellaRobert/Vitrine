@@ -255,8 +255,16 @@ export default function BattlePage() {
   };
 
   const iconUrls: Record<string, string> = {
+    dark: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/dark.png",
+    earth: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/earth.png",
+    fire: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/fire.png",
+    light: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/light.png",
+    lightning:
+      "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/lightning.png",
     physical:
       "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/physical.png",
+    water: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/water.png",
+    wind: "https://droohxprbrxprrqcfqha.supabase.co/storage/v1/object/public/vitrine-assets/battle/icons/wind.png",
   };
 
   const renderIconSprites = (
@@ -492,7 +500,6 @@ export default function BattlePage() {
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
-      fontFamily: "system-ui",
       color: "rgba(15, 23, 42, 0.92)",
       background:
         "radial-gradient(1200px 720px at 12% 0%, rgba(231, 224, 204, 0.55), transparent 60%)," +

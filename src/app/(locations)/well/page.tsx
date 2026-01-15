@@ -50,7 +50,6 @@ export default function WellPage() {
   return (
     <main
       style={{
-        fontFamily: "system-ui",
         color: "rgba(20, 42, 56, 0.92)",
         background:
           "radial-gradient(1200px 720px at 12% 0%, rgba(206, 236, 227, 0.55), transparent 60%)," +

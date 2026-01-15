@@ -46,7 +46,6 @@ export default function CafePage() {
     <main
       onClick={onClickAnywhere}
       style={{
-        fontFamily: "system-ui",
         color: "rgba(63, 35, 12, 0.92)",
         background:
           "radial-gradient(1200px 720px at 20% 0%, rgba(255, 223, 199, 0.65), transparent 58%)," +

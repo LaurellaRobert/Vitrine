@@ -72,7 +72,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "40px auto", fontFamily: "system-ui" }}>
+    <main style={{ maxWidth: 420, margin: "40px auto" }}>
       <h1>Login</h1>
 
       <label>Email</label>
