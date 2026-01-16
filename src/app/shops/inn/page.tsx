@@ -8,12 +8,60 @@ import { getAccessToken, getUserId, restFetch } from "@/lib/supabaseRest";
 type VendorItem = {
   id: string;
   price: number;
+  appearance_chance: number | null;
   item: {
     id: string;
     name: string;
     image_url: string | null;
     description: string | null;
   } | null;
+};
+
+const estFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
+const getEstParts = () => {
+  const parts = estFormatter.formatToParts(new Date());
+  const map: Record<string, number> = {};
+  parts.forEach((part) => {
+    if (part.type === "literal") return;
+    map[part.type] = Number(part.value);
+  });
+  return {
+    year: map.year ?? 0,
+    month: map.month ?? 0,
+    day: map.day ?? 0,
+    hour: map.hour ?? 0,
+    minute: map.minute ?? 0,
+    second: map.second ?? 0,
+  };
+};
+
+const getEstHourKey = () => {
+  const { year, month, day, hour } = getEstParts();
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}-${String(hour).padStart(2, "0")}`;
+};
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
 };
 
 export default function InnVendorPage() {
@@ -24,77 +72,42 @@ export default function InnVendorPage() {
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
-  const rareItemId = "67c1d00c-ad72-49a9-a338-03aa631dd9e3";
-  const rarePrice = 100;
+  const [hourKey, setHourKey] = useState(() => getEstHourKey());
+  const [minutesToRefresh, setMinutesToRefresh] = useState(() => {
+    const { minute } = getEstParts();
+    return 60 - minute;
+  });
+
+  useEffect(() => {
+    const updateHourKey = () => {
+      const nextHourKey = getEstHourKey();
+      setHourKey((prev) => (prev === nextHourKey ? prev : nextHourKey));
+      const { minute } = getEstParts();
+      setMinutesToRefresh(60 - minute);
+    };
+    updateHourKey();
+    const interval = setInterval(updateHourKey, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         const itemsRes = await restFetch<VendorItem[]>("vendor_items", {
-          select: "id,price,item:items(id,name,image_url,description)",
+          select: "id,price,appearance_chance,item:items(id,name,image_url,description)",
           vendor_key: "eq.inn",
           is_active: "eq.true",
-          item_id: `neq.${rareItemId}`,
           order: "price.asc",
         });
-        let nextItems = (itemsRes ?? []) as VendorItem[];
-
-        if (Math.random() < 0.01) {
-          const rareVendorRows = await restFetch<VendorItem[]>("vendor_items", {
-            select: "id,price,item:items(id,name,image_url,description)",
-            vendor_key: "eq.inn",
-            item_id: `eq.${rareItemId}`,
-            is_active: "eq.true",
-            limit: "1",
-          });
-          const rareVendorItem = (rareVendorRows ?? [])[0];
-          if (rareVendorItem?.item && !nextItems.some((entry) => entry.item?.id === rareItemId)) {
-            nextItems = [
-              ...nextItems,
-              {
-                ...rareVendorItem,
-                price: rareVendorItem.price ?? rarePrice,
-              },
-            ];
-          }
-        }
-
-        setItems(nextItems);
-
-        const userId = getUserId();
-        const token = getAccessToken();
-        if (userId && token) {
-          const itemIds = nextItems
-            .map((entry) => entry.item?.id)
-            .filter((id): id is string => Boolean(id));
-          if (itemIds.length > 0) {
-            const ownedRes = await restFetch<{ item_id: string }[]>(
-              "user_collected_items",
-              { select: "item_id", item_id: `in.(${itemIds.join(",")})`, user_id: `eq.${userId}` },
-              { token }
-            );
-            setOwnedItemIds((ownedRes ?? []).map((row) => row.item_id));
-          } else {
-            setOwnedItemIds([]);
-          }
-          const currencyRes = await restFetch<{ balance: number }[]>(
-            "user_currency",
-            { select: "balance", user_id: `eq.${userId}`, limit: "1" },
-            { token }
-          );
-          setBalance(currencyRes?.[0]?.balance ?? 0);
-        } else {
-          setBalance(null);
-          setOwnedItemIds([]);
-        }
+        setItems((itemsRes ?? []) as VendorItem[]);
       } catch (e: any) {
         setError(e?.message ?? "Unknown error");
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [hourKey]);
 
   const handlePurchase = async (vendorItemId: string) => {
     try {
@@ -134,13 +147,53 @@ export default function InnVendorPage() {
     return items.filter((entry) => {
       if (!entry.item) return false;
       if (seen.has(entry.item.id)) return false;
+      const chance = typeof entry.appearance_chance === "number" ? entry.appearance_chance : 100;
+      const roll = seededRandom(hashString(`${hourKey}:${entry.id}`));
+      if (roll > chance / 100) return false;
       seen.add(entry.item.id);
       return true;
     });
-  }, [items]);
+  }, [items, hourKey]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const userId = getUserId();
+        const token = getAccessToken();
+        if (userId && token) {
+          const itemIds = stockedItems
+            .map((entry) => entry.item?.id)
+            .filter((id): id is string => Boolean(id));
+          if (itemIds.length > 0) {
+            const ownedRes = await restFetch<{ item_id: string }[]>(
+              "user_collected_items",
+              { select: "item_id", item_id: `in.(${itemIds.join(",")})`, user_id: `eq.${userId}` },
+              { token }
+            );
+            setOwnedItemIds((ownedRes ?? []).map((row) => row.item_id));
+          } else {
+            setOwnedItemIds([]);
+          }
+          const currencyRes = await restFetch<{ balance: number }[]>(
+            "user_currency",
+            { select: "balance", user_id: `eq.${userId}`, limit: "1" },
+            { token }
+          );
+          setBalance(currencyRes?.[0]?.balance ?? 0);
+        } else {
+          setBalance(null);
+          setOwnedItemIds([]);
+        }
+      } catch (e: any) {
+        setError(e?.message ?? "Unknown error");
+      }
+    })();
+  }, [stockedItems]);
   const ownedSet = useMemo(() => new Set(ownedItemIds), [ownedItemIds]);
   const featuredItems = useMemo(() => stockedItems.slice(0, 4), [stockedItems]);
   const gridItems = useMemo(() => stockedItems.slice(4), [stockedItems]);
+  const refreshLabel =
+    minutesToRefresh <= 1 ? "less than a minute" : `${minutesToRefresh} min`;
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
@@ -342,6 +395,9 @@ export default function InnVendorPage() {
           {error ? <div style={{ color: "rgba(127, 29, 29, 0.9)" }}>{error}</div> : null}
           {loading ? <div style={{ color: "rgba(15, 23, 42, 0.6)" }}>Loading stock…</div> : null}
           {status ? <div style={{ color: "rgba(15, 23, 42, 0.7)" }}>{status}</div> : null}
+          <div style={{ color: "rgba(15, 23, 42, 0.6)", fontSize: 13 }}>
+            Stock refreshes on the hour (ET). Next refresh in {refreshLabel}.
+          </div>
         </div>
 
         <section style={styles.cabinetOuter}>

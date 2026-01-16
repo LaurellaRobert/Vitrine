@@ -87,7 +87,8 @@ export default function OpponentGalleryPage() {
       textAlign: "center",
     },
     portrait: {
-      width: "min(160px, 100%)",
+      width: 160,
+      height: 160,
       borderRadius: 14,
       border: "1px solid rgba(120, 90, 60, 0.22)",
       background: "rgba(255,255,255,0.95)",
@@ -97,10 +98,13 @@ export default function OpponentGalleryPage() {
       justifyContent: "center",
     },
     portraitImg: {
-      width: "100%",
+      maxWidth: "100%",
+      maxHeight: "100%",
+      width: "auto",
       height: "auto",
       display: "block",
       borderRadius: 10,
+      objectFit: "contain",
     },
     name: {
       fontSize: 16,

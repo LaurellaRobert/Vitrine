@@ -29,7 +29,10 @@ const activityItems = [
   { href: "/sanctum", label: "Sanctum" },
 ];
 
-const shopItems = [{ href: "/shops/inn", label: "Inn" }];
+const shopItems = [
+  { href: "/shops/inn", label: "Inn" },
+  { href: "/shops/fortune", label: "Fortune" },
+];
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/") return pathname === "/";

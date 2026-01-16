@@ -246,6 +246,10 @@ export default function BattlePage() {
   const opponentWins = opponentId ? opponentProgress[opponentId]?.wins ?? 0 : 0;
   const opponentScale = 1 + opponentWins * 0.06;
   const scaledOpponentHp = selectedOpponent ? Math.round(selectedOpponent.hp * opponentScale) : 0;
+  const baseOpponentStatSum = selectedOpponent
+    ? selectedOpponent.hp + selectedOpponent.strength + selectedOpponent.defense + selectedOpponent.speed
+    : 0;
+  const victoryPetals = selectedOpponent ? Math.round(100 * Math.pow(baseOpponentStatSum / 200, 1.35)) : 0;
 
   const renderIcons = (map: IconMap | null) => {
     if (!map) return "—";
@@ -382,7 +386,7 @@ export default function BattlePage() {
     setBattleStarted(false);
     setUserHp(userHpMax);
     setEnemyHp(enemyHpMax);
-    setStatus("The ring settles and restores its champions.");
+    setStatus("");
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("battle_active");
     }
@@ -448,7 +452,7 @@ export default function BattlePage() {
 
       if (isBattleOver) {
         setBattleWinner(battleOutcome);
-        setStatus("The duel ends. The ring grows still.");
+        setStatus("");
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("battle_active");
         }
@@ -594,10 +598,11 @@ export default function BattlePage() {
       gap: 10,
     },
     portraitImg: {
-      width: "min(260px, 100%)",
-      height: "auto",
+      width: 220,
+      height: 220,
       display: "block",
       borderRadius: 16,
+      objectFit: "contain",
     },
     hpWrap: {
       width: "100%",
@@ -707,6 +712,8 @@ export default function BattlePage() {
   const enemyHpRatio = enemyHpMax ? Math.max(0, Math.min(1, (enemyHp ?? enemyHpMax) / enemyHpMax)) : 0;
   const nextBattleExp =
     battleLevel && battleLevel > 0 ? Math.floor(100 * Math.pow(1.35, battleLevel - 1)) : null;
+  const battleExpRatio =
+    nextBattleExp && battleExp !== null ? Math.max(0, Math.min(1, battleExp / nextBattleExp)) : 0;
   const duelPortraits = (
     <div style={styles.duelRow}>
       <div style={styles.portrait}>
@@ -783,40 +790,84 @@ export default function BattlePage() {
           <p style={styles.subtitle}>
             Select an opponent, step into the ring, and resolve each turn as a single decisive moment.
           </p>
-          {battleLevel !== null && battleExp !== null ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(120, 90, 60, 0.25)",
-                  background: "rgba(255,255,255,0.9)",
-                  fontSize: 13,
-                  color: "rgba(83, 46, 20, 0.9)",
-                }}
-              >
-                Battle level {battleLevel}
-              </div>
-              {nextBattleExp ? (
+          {battleLevel !== null && battleExp !== null && !battleStarted && !showResults && !opponentId ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(160px, 220px) 1fr",
+                gap: 16,
+                alignItems: "center",
+                padding: "14px 16px",
+                borderRadius: 18,
+                border: "1px solid rgba(120, 90, 60, 0.3)",
+                background:
+                  "linear-gradient(120deg, rgba(255, 244, 226, 0.95), rgba(250, 236, 210, 0.85))",
+                boxShadow: "0 12px 30px rgba(60, 45, 32, 0.16)",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <div
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "6px 12px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(120, 90, 60, 0.25)",
-                    background: "rgba(255,255,255,0.9)",
-                    fontSize: 13,
-                    color: "rgba(83, 46, 20, 0.9)",
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: 1.1,
+                    color: "rgba(120, 90, 60, 0.7)",
                   }}
                 >
-                  {battleExp} / {nextBattleExp} exp
+                  Battle level
                 </div>
-              ) : null}
+                <div
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: "rgba(83, 46, 20, 0.95)",
+                    letterSpacing: -0.6,
+                  }}
+                >
+                  {battleLevel}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.8,
+                      color: "rgba(120, 90, 60, 0.7)",
+                    }}
+                  >
+                    Battle exp
+                  </div>
+                  {nextBattleExp ? (
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(83, 46, 20, 0.95)" }}>
+                      {battleExp} / {nextBattleExp}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 14, color: "rgba(83, 46, 20, 0.7)" }}>Total {battleExp}</div>
+                  )}
+                </div>
+                {nextBattleExp ? (
+                  <div
+                    style={{
+                      height: 10,
+                      borderRadius: 999,
+                      background: "rgba(120, 90, 60, 0.15)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${battleExpRatio * 100}%`,
+                        borderRadius: 999,
+                        background: "linear-gradient(90deg, rgba(205, 140, 76, 1), rgba(235, 184, 120, 1))",
+                        boxShadow: "0 0 12px rgba(205, 140, 76, 0.35)",
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : null}
         </header>
@@ -837,7 +888,6 @@ export default function BattlePage() {
           </div>
         ) : null}
         <section style={styles.panel}>
-          {loading ? <div style={styles.info}>Summoning loadouts…</div> : null}
           {status ? <div style={styles.info}>{status}</div> : null}
 
           {!opponentReady ? (
@@ -863,12 +913,38 @@ export default function BattlePage() {
                       ? "Defeat. The ring asks you to try again."
                       : "A draw. The ring is evenly matched."}
                   </div>
-                  <div style={styles.info}>
-                    Rewards: A hush of applause, a carved token, and a promise of greater spoils.
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      border: "1px solid rgba(191, 147, 102, 0.45)",
+                      background: "linear-gradient(140deg, rgba(255, 244, 226, 0.95), rgba(255, 233, 200, 0.88))",
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6, color: "rgba(120, 90, 60, 0.7)" }}>
+                      Rewards
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+                      {battleWinner === "user" ? (
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "rgba(83, 46, 20, 0.92)" }}>
+                          +{victoryPetals} petals
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 14, color: "rgba(83, 46, 20, 0.75)" }}>
+                          The ring offers no petals this time.
+                        </div>
+                      )}
+                      {lastExpGain !== null ? (
+                        <div style={{ fontSize: 14, color: "rgba(83, 46, 20, 0.8)" }}>+{lastExpGain} EXP</div>
+                      ) : null}
+                    </div>
+                    <div style={{ fontSize: 13, color: "rgba(83, 46, 20, 0.7)" }}>
+                      A hush of applause, a carved token, and a promise of greater spoils.
+                    </div>
                   </div>
-                  {lastExpGain !== null ? (
-                    <div style={styles.info}>EXP earned: {lastExpGain}</div>
-                  ) : null}
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     <button type="button" style={styles.button} onClick={handleRematch}>
                       Rematch

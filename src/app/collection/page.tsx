@@ -685,41 +685,6 @@ export default function CollectionPage() {
       fontWeight: 600,
       color: "rgba(78, 54, 30, 0.9)",
     },
-    modalImageWrap: {
-      borderRadius: 18,
-      border: "1px solid rgba(120, 90, 60, 0.28)",
-      background: "rgba(246, 236, 222, 0.98)",
-      backgroundImage:
-        "repeating-linear-gradient(120deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 3px, rgba(112, 76, 44, 0.04) 4px, rgba(112, 76, 44, 0.04) 9px)",
-      padding: 18,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      position: "relative",
-      overflow: "hidden",
-    },
-    modalFrame: {
-      position: "absolute",
-      inset: 10,
-      borderRadius: 14,
-      border: "1px solid rgba(120, 90, 60, 0.35)",
-      background: "rgba(255, 255, 255, 0.55)",
-      pointerEvents: "none",
-    },
-    modalImageMat: {
-      borderRadius: 14,
-      border: "1px solid rgba(120, 90, 60, 0.22)",
-      background: "rgba(255, 255, 255, 0.95)",
-      padding: 18,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      position: "relative",
-      zIndex: 1,
-      width: "min(320px, 80vw)",
-      maxHeight: "min(320px, 60vh)",
-      boxSizing: "border-box",
-    },
     modalTag: {
       alignSelf: "flex-start",
       padding: "6px 10px",
@@ -988,30 +953,23 @@ export default function CollectionPage() {
                 </button>
               </div>
             </div>
-            <div style={styles.modalImageWrap}>
-              <div style={styles.modalFrame} aria-hidden="true" />
-              <div style={styles.modalImageMat}>
-                {selectedItem.image_url ? (
-                  <Image
-                    src={selectedItem.image_url}
-                    alt={selectedItem.name}
-                    width={500}
-                    height={500}
-                    style={{
-                      maxWidth: 300,
-                      maxHeight: 300,
-                      width: "auto",
-                      height: "auto",
-                      objectFit: "contain",
-                      filter: collected.has(selectedItem.id) ? "none" : "grayscale(100%)",
-                      opacity: collected.has(selectedItem.id) ? 1 : 0.26,
-                    }}
-                  />
-                ) : (
-                  <div style={styles.placeholder}>No image</div>
-                )}
-              </div>
-            </div>
+            {selectedItem.image_url ? (
+              <Image
+                src={selectedItem.image_url}
+                alt={selectedItem.name}
+                width={300}
+                height={300}
+                style={{
+                  width: 300,
+                  height: 300,
+                  objectFit: "contain",
+                  filter: collected.has(selectedItem.id) ? "none" : "grayscale(100%)",
+                  alignSelf: "center",
+                }}
+              />
+            ) : (
+              <div style={styles.placeholder}>No image</div>
+            )}
             <div style={styles.modalTitlePlaque}>
               <div style={styles.modalTitlePlaqueTrim} aria-hidden="true" />
               <div style={{ ...styles.modalTitlePlaqueOrnament, left: 12 }} aria-hidden="true" />
